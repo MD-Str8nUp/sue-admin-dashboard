@@ -21,20 +21,35 @@ const demoState = {
   captures: [
     {
       id: "demo-capture-1",
-      text: "Review which admin reminders should be weekly.",
+      text: "Parking",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: "demo-capture-2",
+      text: "Personal appointment",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: "demo-capture-3",
+      text: "Admin follow-up",
       createdAt: new Date().toISOString()
     }
   ],
   busyBlocks: [
-    { id: "demo-busy-1", start: "09:00", end: "10:30", label: "Focus admin" },
-    { id: "demo-busy-2", start: "13:00", end: "14:00", label: "Appointment block" }
+    { id: "demo-busy-1", start: "09:00", end: "12:00", label: "Awarely — busy" },
+    { id: "demo-busy-2", start: "14:00", end: "17:00", label: "Feel Good — busy" }
   ],
   tasks: [
-    { id: "demo-task-1", title: "Confirm reminder categories", due: today(), status: "Open" },
-    { id: "demo-task-2", title: "Prepare generic weekly checklist", due: "", status: "Waiting" }
+    { id: "demo-task-1", title: "Complete notes", due: today(), status: "Open" },
+    { id: "demo-task-2", title: "Send invoice", due: today(), status: "Open" },
+    { id: "demo-task-3", title: "Supervision", due: "", status: "Open" },
+    { id: "demo-task-4", title: "Workers Comp check", due: "", status: "Open" },
+    { id: "demo-task-5", title: "Follow up letter", due: "", status: "Open" }
   ],
   deadlines: [
-    { id: "demo-deadline-1", title: "Monthly admin review", date: today(), leadDays: 5 }
+    { id: "demo-deadline-1", title: "CPD", date: today(), leadDays: 7 },
+    { id: "demo-deadline-2", title: "Renewal", date: today(), leadDays: 14 },
+    { id: "demo-deadline-3", title: "Invoice due", date: today(), leadDays: 5 }
   ],
   xenaInfo: {
     schedule: "Best check-in windows: mornings for planning, afternoons for admin review.",
@@ -50,10 +65,14 @@ let state = loadState();
 
 function loadState() {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return structuredClone(demoState);
+    }
+    const saved = JSON.parse(raw);
     return mergeState(saved);
   } catch {
-    return structuredClone(initialState);
+    return structuredClone(demoState);
   }
 }
 
@@ -95,7 +114,11 @@ function createId() {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function formatDate(value) {
@@ -118,12 +141,13 @@ function formatDateTime(value) {
   }).format(new Date(value));
 }
 
-function renderItemList({ key, targetId, emptyText, title, meta, actions }) {
+function renderItemList({ key, targetId, emptyText, title, meta, actions, items }) {
   const list = document.getElementById(targetId);
   const template = document.getElementById("item-template");
+  const sourceItems = items || state[key];
   list.innerHTML = "";
 
-  if (!state[key].length) {
+  if (!sourceItems.length) {
     const empty = document.createElement("li");
     empty.className = "empty";
     empty.textContent = emptyText;
@@ -131,8 +155,9 @@ function renderItemList({ key, targetId, emptyText, title, meta, actions }) {
     return;
   }
 
-  state[key].forEach((item) => {
+  sourceItems.forEach((item) => {
     const node = template.content.firstElementChild.cloneNode(true);
+    node.classList.add(`item--${key}`);
     node.classList.toggle("is-done", item.status === "Done");
     node.querySelector(".item__title").textContent = title(item);
     node.querySelector(".item__meta").textContent = meta(item);
@@ -228,7 +253,7 @@ function renderAll() {
     targetId: "busy-list",
     emptyText: "No busy blocks for today.",
     title: (item) => item.label,
-    meta: (item) => `${item.start} to ${item.end}`,
+    meta: (item) => `${item.start}–${item.end}`,
     actions: (item) => [
       {
         label: "Edit",
@@ -244,12 +269,49 @@ function renderAll() {
     ]
   });
 
+  const todayTasks = state.tasks.filter((item) => item.due === today() && item.status !== "Done");
+  const weekTasks = state.tasks.filter((item) => item.due !== today() || item.status === "Done");
+
+  renderItemList({
+    key: "tasks",
+    targetId: "today-task-list",
+    emptyText: "No extra tasks for today.",
+    items: todayTasks,
+    title: (item) => item.title,
+    meta: (item) => (item.due ? formatDate(item.due) : item.status),
+    actions: (item) => [
+      {
+        label: item.status === "Done" ? "Reopen" : "Done",
+        onClick: () => {
+          item.status = item.status === "Done" ? "Open" : "Done";
+          saveState();
+          renderAll();
+        }
+      },
+      {
+        label: "Edit",
+        onClick: () => {
+          const title = promptText("Edit task", item.title);
+          if (!title) return;
+          const due = promptDate("Edit due date", item.due);
+          if (due === null) return;
+          item.title = title;
+          item.due = due;
+          saveState();
+          renderAll();
+        }
+      },
+      { label: "Delete", danger: true, onClick: () => removeItem("tasks", item.id) }
+    ]
+  });
+
   renderItemList({
     key: "tasks",
     targetId: "task-list",
-    emptyText: "No action queue tasks yet.",
+    emptyText: "No weekly tasks yet.",
+    items: weekTasks,
     title: (item) => item.title,
-    meta: (item) => `${item.status} | Due: ${formatDate(item.due)}`,
+    meta: (item) => (item.due ? formatDate(item.due) : item.status),
     actions: (item) => [
       {
         label: item.status === "Done" ? "Reopen" : "Done",
@@ -281,7 +343,7 @@ function renderAll() {
     targetId: "deadline-list",
     emptyText: "No upcoming deadlines yet.",
     title: (item) => item.title,
-    meta: (item) => `${formatDate(item.date)} | remind ${item.leadDays} day${Number(item.leadDays) === 1 ? "" : "s"} before`,
+    meta: (item) => item.date ? formatDate(item.date) : "Date",
     actions: (item) => [
       {
         label: "Edit",
