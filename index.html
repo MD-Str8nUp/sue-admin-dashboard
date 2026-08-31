@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sue’s Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__inner">
+        <p class="kicker">Phase 1 personal admin</p>
+        <h1>Sue’s Admin Dashboard</h1>
+        <p class="intro">
+          A private browser-only dashboard for general workload notes, tasks,
+          deadlines and context Sue wants to give Xena.
+        </p>
+        <div class="notice" role="note">
+          Calendar and email integrations are not connected. This dashboard does
+          not use client data, credentials, real email addresses or practice
+          integrations. Any future connection requires practice approval first.
+        </div>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="toolbar" aria-label="Dashboard controls">
+        <div>
+          <strong id="today-label">Today</strong>
+          <span>All information stays in this browser's localStorage.</span>
+        </div>
+        <button class="button button--ghost" id="load-demo" type="button">Load demo</button>
+        <button class="button button--danger" id="reset-empty" type="button">Empty reset</button>
+      </section>
+
+      <section class="panel panel--wide" aria-labelledby="capture-title">
+        <div class="panel__header">
+          <div>
+            <h2 id="capture-title">Quick Capture</h2>
+            <p>Drop in generic admin notes before sorting them.</p>
+          </div>
+        </div>
+        <form class="form form--inline" id="capture-form">
+          <label class="field field--grow">
+            <span>Capture note</span>
+            <textarea id="capture-text" rows="3" placeholder="Example: follow up paperwork, check reminder timing, organise admin block"></textarea>
+          </label>
+          <button class="button" type="submit">Add capture</button>
+        </form>
+        <ul class="list" id="capture-list" aria-live="polite"></ul>
+      </section>
+
+      <div class="grid">
+        <section class="panel" aria-labelledby="busy-title">
+          <div class="panel__header">
+            <div>
+              <h2 id="busy-title">Today Workload</h2>
+              <p>Busy blocks with generic editable labels only.</p>
+            </div>
+          </div>
+          <form class="form" id="busy-form">
+            <div class="form__row">
+              <label class="field">
+                <span>Start</span>
+                <input id="busy-start" type="time" required>
+              </label>
+              <label class="field">
+                <span>End</span>
+                <input id="busy-end" type="time" required>
+              </label>
+            </div>
+            <label class="field">
+              <span>Generic label</span>
+              <input id="busy-label" type="text" maxlength="80" placeholder="Admin, appointment, travel, focus time" required>
+            </label>
+            <button class="button" type="submit">Add block</button>
+          </form>
+          <ul class="list" id="busy-list"></ul>
+        </section>
+
+        <section class="panel" aria-labelledby="tasks-title">
+          <div class="panel__header">
+            <div>
+              <h2 id="tasks-title">Action Queue</h2>
+              <p>Create, edit, complete and remove tasks.</p>
+            </div>
+          </div>
+          <form class="form" id="task-form">
+            <label class="field">
+              <span>Task</span>
+              <input id="task-title" type="text" maxlength="120" placeholder="General admin action" required>
+            </label>
+            <div class="form__row">
+              <label class="field">
+                <span>Due</span>
+                <input id="task-due" type="date">
+              </label>
+              <label class="field">
+                <span>Status</span>
+                <select id="task-status">
+                  <option value="Open">Open</option>
+                  <option value="Waiting">Waiting</option>
+                  <option value="Done">Done</option>
+                </select>
+              </label>
+            </div>
+            <button class="button" type="submit">Add task</button>
+          </form>
+          <ul class="list" id="task-list"></ul>
+        </section>
+
+        <section class="panel" aria-labelledby="deadlines-title">
+          <div class="panel__header">
+            <div>
+              <h2 id="deadlines-title">Upcoming Deadlines</h2>
+              <p>Track generic dates and reminder lead time.</p>
+            </div>
+          </div>
+          <form class="form" id="deadline-form">
+            <label class="field">
+              <span>Deadline label</span>
+              <input id="deadline-title" type="text" maxlength="120" placeholder="Renewal, lodgement, payment, review" required>
+            </label>
+            <div class="form__row">
+              <label class="field">
+                <span>Date</span>
+                <input id="deadline-date" type="date" required>
+              </label>
+              <label class="field">
+                <span>Lead time</span>
+                <input id="deadline-lead" type="number" min="0" max="365" value="7" required>
+              </label>
+            </div>
+            <button class="button" type="submit">Add deadline</button>
+          </form>
+          <ul class="list" id="deadline-list"></ul>
+        </section>
+
+        <section class="panel" aria-labelledby="privacy-title">
+          <div class="panel__header">
+            <div>
+              <h2 id="privacy-title">Privacy Check</h2>
+              <p>Phase 1 boundaries for safe use.</p>
+            </div>
+          </div>
+          <ul class="check-list">
+            <li>No client names or matter details</li>
+            <li>No passwords, tokens or credentials</li>
+            <li>No real email addresses</li>
+            <li>No calendar, inbox or practice system connection</li>
+            <li>Export is manual and user-controlled</li>
+          </ul>
+        </section>
+      </div>
+
+      <section class="panel panel--wide" aria-labelledby="xena-title">
+        <div class="panel__header panel__header--split">
+          <div>
+            <h2 id="xena-title">Information for Xena</h2>
+            <p>Save Sue's preferences locally, then export a file for Telegram.</p>
+          </div>
+          <span class="save-state" id="xena-save-state">Not saved this session</span>
+        </div>
+        <form class="form xena-form" id="xena-form">
+          <label class="field">
+            <span>Preferred schedule</span>
+            <textarea id="xena-schedule" rows="4" placeholder="Preferred work blocks, quiet times, check-in windows, day structure"></textarea>
+          </label>
+          <label class="field">
+            <span>Inbox labels and purposes</span>
+            <textarea id="xena-inbox-labels" rows="4" placeholder="Use labels or categories only. Do not include email addresses."></textarea>
+          </label>
+          <label class="field">
+            <span>Recurring deadlines and reminder lead times</span>
+            <textarea id="xena-recurring-deadlines" rows="4" placeholder="Example: monthly admin review - remind 5 days before"></textarea>
+          </label>
+          <label class="field">
+            <span>Approvals status</span>
+            <textarea id="xena-approvals" rows="4" placeholder="What Xena may draft, what needs Sue's approval, and what is not approved"></textarea>
+          </label>
+          <label class="field">
+            <span>Dashboard preferences</span>
+            <textarea id="xena-dashboard-preferences" rows="4" placeholder="Preferred sections, labels, ordering, colours, reminders or default views"></textarea>
+          </label>
+          <div class="actions">
+            <button class="button" type="submit">Save locally</button>
+            <button class="button button--ghost" id="export-json" type="button">Export JSON</button>
+            <button class="button button--ghost" id="export-text" type="button">Export text</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <template id="item-template">
+      <li class="item">
+        <div class="item__content">
+          <strong class="item__title"></strong>
+          <span class="item__meta"></span>
+        </div>
+        <div class="item__actions"></div>
+      </li>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
