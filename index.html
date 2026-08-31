@@ -20,6 +20,14 @@
           not use client data, credentials, real email addresses or practice
           integrations. Any future connection requires practice approval first.
         </div>
+        <div class="notice notice--backup" role="note">
+          <strong>Back up before switching devices or clearing browser data.</strong>
+          Everything you type here is saved only in this browser on this device.
+          If you clear browser data, use a different browser, or move to a new
+          device, this information will be gone. Use <em>Export JSON backup</em>
+          in the Information for Xena area to save the full dashboard state, and
+          <em>Import JSON</em> to restore it later.
+        </div>
       </div>
     </header>
 
@@ -31,6 +39,29 @@
         </div>
         <button class="button button--ghost" id="load-demo" type="button">Load demo</button>
         <button class="button button--danger" id="reset-empty" type="button">Empty reset</button>
+      </section>
+
+      <section class="panel panel--wide summary" aria-labelledby="summary-title">
+        <div class="panel__header">
+          <div>
+            <h2 id="summary-title">At a glance</h2>
+            <p>Live counts from data stored in this browser.</p>
+          </div>
+        </div>
+        <dl class="summary__grid" aria-live="polite">
+          <div class="summary__item">
+            <dt class="summary__label">Open tasks</dt>
+            <dd class="summary__value" id="summary-open-tasks">0</dd>
+          </div>
+          <div class="summary__item summary__item--warn">
+            <dt class="summary__label">Overdue deadlines</dt>
+            <dd class="summary__value" id="summary-overdue">0</dd>
+          </div>
+          <div class="summary__item">
+            <dt class="summary__label">Due within 7 days</dt>
+            <dd class="summary__value" id="summary-upcoming">0</dd>
+          </div>
+        </dl>
       </section>
 
       <section class="panel panel--wide" aria-labelledby="capture-title">
@@ -184,9 +215,12 @@
           </label>
           <div class="actions">
             <button class="button" type="submit">Save locally</button>
-            <button class="button button--ghost" id="export-json" type="button">Export JSON</button>
+            <button class="button button--ghost" id="export-json" type="button">Export JSON backup</button>
             <button class="button button--ghost" id="export-text" type="button">Export text</button>
+            <button class="button button--ghost" id="import-json" type="button">Import JSON</button>
+            <input id="import-json-file" type="file" accept="application/json,.json" hidden>
           </div>
+          <p class="import-status" id="import-status" role="status" aria-live="polite"></p>
         </form>
       </section>
     </main>

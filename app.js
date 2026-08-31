@@ -1,4 +1,6 @@
 const STORAGE_KEY = "sueAdminDashboard:v1";
+const EXPORT_VERSION = 1;
+const REQUIRED_STATE_KEYS = ["captures", "busyBlocks", "tasks", "deadlines", "xenaInfo"];
 
 const initialState = {
   captures: [],
@@ -56,6 +58,10 @@ function loadState() {
 }
 
 function mergeState(saved) {
+  if (!saved || typeof saved !== "object") {
+    return structuredClone(initialState);
+  }
+
   return {
     ...structuredClone(initialState),
     ...saved,
@@ -68,6 +74,20 @@ function mergeState(saved) {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function stateForStorage(nextState) {
+  const merged = mergeState(nextState);
+  return {
+    captures: Array.isArray(merged.captures) ? merged.captures : [],
+    busyBlocks: Array.isArray(merged.busyBlocks) ? merged.busyBlocks : [],
+    tasks: Array.isArray(merged.tasks) ? merged.tasks : [],
+    deadlines: Array.isArray(merged.deadlines) ? merged.deadlines : [],
+    xenaInfo: {
+      ...initialState.xenaInfo,
+      ...(merged.xenaInfo && typeof merged.xenaInfo === "object" ? merged.xenaInfo : {})
+    }
+  };
 }
 
 function createId() {
@@ -149,12 +169,38 @@ function removeItem(key, id) {
   renderAll();
 }
 
+function renderSummary() {
+  const todayStr = today();
+  const in7 = new Date();
+  in7.setHours(0, 0, 0, 0);
+  in7.setDate(in7.getDate() + 7);
+  const in7Str = in7.toISOString().slice(0, 10);
+
+  const openTasks = state.tasks.filter((t) => t.status !== "Done").length;
+  const overdue = state.deadlines.filter((d) => d.date && d.date < todayStr).length;
+  const upcoming = state.deadlines.filter(
+    (d) => d.date && d.date >= todayStr && d.date <= in7Str
+  ).length;
+
+  document.getElementById("summary-open-tasks").textContent = String(openTasks);
+  document.getElementById("summary-overdue").textContent = String(overdue);
+  document.getElementById("summary-upcoming").textContent = String(upcoming);
+}
+
+function setImportStatus(message, type = "info") {
+  const status = document.getElementById("import-status");
+  status.textContent = message;
+  status.className = `import-status import-status--${type}`;
+}
+
 function renderAll() {
   document.getElementById("today-label").textContent = new Intl.DateTimeFormat("en-AU", {
     weekday: "long",
     day: "numeric",
     month: "long"
   }).format(new Date());
+
+  renderSummary();
 
   renderItemList({
     key: "captures",
@@ -305,6 +351,87 @@ function informationPayload() {
   };
 }
 
+function dashboardExportPayload() {
+  readXenaForm();
+  state = stateForStorage(state);
+  saveState();
+
+  return {
+    exportVersion: EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    privacyNote:
+      "Phase 1 static dashboard backup. Calendar/email integrations are not connected. This export should not contain client data, credentials, real email addresses or practice integration data.",
+    state
+  };
+}
+
+function validateImportedDashboard(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { valid: false, message: "Import failed: the JSON file is not a dashboard export object." };
+  }
+
+  if (!Object.hasOwn(payload, "state") || !payload.state || typeof payload.state !== "object") {
+    return { valid: false, message: "Import failed: the export is missing its top-level state object." };
+  }
+
+  const importedState = payload.state;
+  const missingKeys = REQUIRED_STATE_KEYS.filter((key) => !Object.hasOwn(importedState, key));
+  if (missingKeys.length) {
+    return {
+      valid: false,
+      message: `Import failed: the state object is missing ${missingKeys.join(", ")}.`
+    };
+  }
+
+  const arrayKeys = ["captures", "busyBlocks", "tasks", "deadlines"];
+  const invalidArrayKey = arrayKeys.find((key) => !Array.isArray(importedState[key]));
+  if (invalidArrayKey) {
+    return { valid: false, message: `Import failed: state.${invalidArrayKey} must be a list.` };
+  }
+
+  if (!importedState.xenaInfo || typeof importedState.xenaInfo !== "object" || Array.isArray(importedState.xenaInfo)) {
+    return { valid: false, message: "Import failed: state.xenaInfo must be an object." };
+  }
+
+  return { valid: true, importedState: stateForStorage(importedState) };
+}
+
+function importDashboardFile(file) {
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const validation = validateImportedDashboard(JSON.parse(String(reader.result)));
+      if (!validation.valid) {
+        setImportStatus(validation.message, "error");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "Replace all dashboard data stored in this browser with the selected JSON backup? This cannot be undone unless you have another export."
+      );
+      if (!confirmed) {
+        setImportStatus("Import cancelled. Existing local dashboard data was not changed.", "info");
+        return;
+      }
+
+      state = validation.importedState;
+      saveState();
+      renderAll();
+      setImportStatus("Import complete. Dashboard data has been restored in this browser.", "success");
+    } catch {
+      setImportStatus("Import failed: the selected file is not valid JSON.", "error");
+    }
+  });
+
+  reader.addEventListener("error", () => {
+    setImportStatus("Import failed: the selected file could not be read.", "error");
+  });
+
+  reader.readAsText(file);
+}
+
 function downloadFile(filename, type, contents) {
   const blob = new Blob([contents], { type });
   const url = URL.createObjectURL(blob);
@@ -403,8 +530,9 @@ function setupForms() {
   });
 
   document.getElementById("export-json").addEventListener("click", () => {
-    const payload = informationPayload();
-    downloadFile(`information-for-xena-${today()}.json`, "application/json", JSON.stringify(payload, null, 2));
+    const payload = dashboardExportPayload();
+    downloadFile(`sue-admin-dashboard-backup-${today()}.json`, "application/json", JSON.stringify(payload, null, 2));
+    setImportStatus("JSON backup exported. Keep it somewhere safe before clearing browser data or changing devices.", "success");
     renderAll();
   });
 
@@ -412,6 +540,15 @@ function setupForms() {
     const payload = informationPayload();
     downloadFile(`information-for-xena-${today()}.txt`, "text/plain", payloadAsText(payload));
     renderAll();
+  });
+
+  document.getElementById("import-json").addEventListener("click", () => {
+    document.getElementById("import-json-file").click();
+  });
+
+  document.getElementById("import-json-file").addEventListener("change", (event) => {
+    importDashboardFile(event.target.files[0]);
+    event.target.value = "";
   });
 
   document.getElementById("load-demo").addEventListener("click", () => {

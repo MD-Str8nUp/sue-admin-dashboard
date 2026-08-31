@@ -161,6 +161,40 @@ h2 {
   gap: 12px;
 }
 
+.summary__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.summary__item {
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.summary__item--warn {
+  background: #fff5f3;
+}
+
+.summary__label {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.summary__value {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .form {
   display: grid;
   gap: 12px;
@@ -343,6 +377,26 @@ textarea:focus {
   gap: 10px;
 }
 
+.import-status {
+  grid-column: 1 / -1;
+  min-height: 1.4em;
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.import-status--info {
+  color: var(--muted);
+}
+
+.import-status--success {
+  color: var(--success);
+}
+
+.import-status--error {
+  color: var(--danger);
+}
+
 @media (min-width: 760px) {
   h1 {
     font-size: 2.65rem;
@@ -377,6 +431,7 @@ textarea:focus {
 
   .grid,
   .form__row,
+  .summary__grid,
   .xena-form {
     grid-template-columns: 1fr;
   }
