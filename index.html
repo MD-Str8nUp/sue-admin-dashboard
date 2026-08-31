@@ -27,67 +27,11 @@
     </header>
 
     <main class="shell" id="main">
-      <details class="notice-panel">
-        <summary class="notice-panel__summary">
-          <span class="notice-panel__badge" aria-hidden="true">i</span>
-          <span>Privacy &amp; backup notes — no calendar, inbox or client data is connected</span>
-        </summary>
-        <div class="notice-panel__body">
-          <p>
-            A private browser-only dashboard for general workload notes, tasks,
-            deadlines and context Sue wants to give Xena. Calendar and email
-            integrations are not connected. This dashboard does not use client
-            data, credentials, real email addresses or practice integrations.
-            Any future connection requires practice approval first.
-          </p>
-          <p>
-            <strong>Back up before switching devices or clearing browser data.</strong>
-            Everything you type here is saved only in this browser on this device.
-            If you clear browser data, use a different browser, or move to a new
-            device, this information will be gone. Use <em>Export JSON backup</em>
-            in the Information for Xena area to save the full dashboard state,
-            and <em>Import JSON</em> to restore it later.
-          </p>
-        </div>
-      </details>
-
-      <section class="glance" aria-labelledby="summary-title">
-        <div class="glance__header">
-          <h2 id="summary-title" class="section-title">At a glance</h2>
-          <p class="section-hint">Live counts from data stored in this browser.</p>
-        </div>
-        <dl class="glance__grid" aria-live="polite">
-          <div class="glance__item">
-            <dt class="glance__label">Open tasks</dt>
-            <dd class="glance__value" id="summary-open-tasks">0</dd>
-          </div>
-          <div class="glance__item glance__item--warn">
-            <dt class="glance__label">Overdue deadlines</dt>
-            <dd class="glance__value" id="summary-overdue">0</dd>
-          </div>
-          <div class="glance__item">
-            <dt class="glance__label">Due within 7 days</dt>
-            <dd class="glance__value" id="summary-upcoming">0</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section class="panel panel--capture" aria-labelledby="capture-title">
-        <div class="panel__header">
-          <div>
-            <h2 id="capture-title" class="section-title">Quick Capture</h2>
-            <p class="section-hint">Drop in a generic admin note before sorting it later.</p>
-          </div>
-        </div>
-        <form class="form form--capture" id="capture-form">
-          <label class="field field--grow">
-            <span class="field__label">Capture note</span>
-            <textarea id="capture-text" rows="2" placeholder="Example: follow up paperwork, check reminder timing, organise admin block"></textarea>
-          </label>
-          <button class="button" type="submit">Add capture</button>
-        </form>
-        <ul class="list list--compact" id="capture-list" aria-live="polite"></ul>
-      </section>
+      <div class="sr-only" aria-live="polite">
+        <span id="summary-open-tasks">0</span>
+        <span id="summary-overdue">0</span>
+        <span id="summary-upcoming">0</span>
+      </div>
 
       <div class="workspace" aria-label="Dashboard workspace">
         <section class="panel" aria-labelledby="busy-title">
@@ -127,6 +71,14 @@
               <p class="section-hint">Create, edit, complete and remove tasks.</p>
             </div>
           </div>
+          <form class="form form--capture form--capture-compact" id="capture-form">
+            <label class="field field--grow">
+              <span class="field__label" id="capture-title">Quick capture</span>
+              <textarea id="capture-text" rows="2" placeholder="Add a task or reminder…"></textarea>
+            </label>
+            <button class="button" type="submit">Add</button>
+          </form>
+          <ul class="list list--compact capture-list" id="capture-list" aria-live="polite"></ul>
           <ul class="list" id="task-list"></ul>
           <details class="add-drawer">
             <summary class="add-drawer__summary">Add task</summary>
@@ -154,54 +106,54 @@
           </details>
         </section>
 
-        <section class="panel" aria-labelledby="deadlines-title">
-          <div class="panel__header">
-            <div>
-              <h2 id="deadlines-title" class="section-title">Upcoming Deadlines</h2>
-              <p class="section-hint">Track generic dates and reminder lead time.</p>
-            </div>
-          </div>
-          <ul class="list" id="deadline-list"></ul>
-          <details class="add-drawer">
-            <summary class="add-drawer__summary">Add deadline</summary>
-            <form class="form" id="deadline-form">
-              <label class="field">
-                <span class="field__label">Deadline label</span>
-                <input id="deadline-title" type="text" maxlength="120" placeholder="Renewal, lodgement, payment, review" required>
-              </label>
-              <div class="form__row">
-                <label class="field">
-                  <span class="field__label">Date</span>
-                  <input id="deadline-date" type="date" required>
-                </label>
-                <label class="field">
-                  <span class="field__label">Lead time</span>
-                  <input id="deadline-lead" type="number" min="0" max="365" value="7" required>
-                </label>
+        <div class="right-rail">
+          <section class="panel" aria-labelledby="deadlines-title">
+            <div class="panel__header">
+              <div>
+                <h2 id="deadlines-title" class="section-title">Upcoming Deadlines</h2>
+                <p class="section-hint">Track generic dates and reminder lead time.</p>
               </div>
-              <button class="button" type="submit">Add deadline</button>
-            </form>
-          </details>
-        </section>
+            </div>
+            <ul class="list" id="deadline-list"></ul>
+            <details class="add-drawer">
+              <summary class="add-drawer__summary">Add deadline</summary>
+              <form class="form" id="deadline-form">
+                <label class="field">
+                  <span class="field__label">Deadline label</span>
+                  <input id="deadline-title" type="text" maxlength="120" placeholder="Renewal, lodgement, payment, review" required>
+                </label>
+                <div class="form__row">
+                  <label class="field">
+                    <span class="field__label">Date</span>
+                    <input id="deadline-date" type="date" required>
+                  </label>
+                  <label class="field">
+                    <span class="field__label">Lead time</span>
+                    <input id="deadline-lead" type="number" min="0" max="365" value="7" required>
+                  </label>
+                </div>
+                <button class="button" type="submit">Add deadline</button>
+              </form>
+            </details>
+          </section>
+
+          <section class="panel panel--sources" aria-labelledby="sources-title">
+            <div class="panel__header">
+              <div>
+                <h2 id="sources-title" class="section-title">Phase 1 Status</h2>
+                <p class="section-hint">Safe, local-only setup.</p>
+              </div>
+            </div>
+            <ul class="status-list">
+              <li><span aria-hidden="true">✓</span> Tasks and deadlines saved in this browser</li>
+              <li><span aria-hidden="true">✓</span> Generic busy blocks only</li>
+              <li><span aria-hidden="true">✓</span> No calendar, inbox or practice connection</li>
+            </ul>
+          </section>
+        </div>
       </div>
 
       <div class="secondary">
-        <section class="panel panel--privacy" aria-labelledby="privacy-title">
-          <div class="panel__header">
-            <div>
-              <h2 id="privacy-title" class="section-title">Privacy Check</h2>
-              <p class="section-hint">Phase 1 boundaries for safe use.</p>
-            </div>
-          </div>
-          <ul class="check-list">
-            <li>No client names or matter details</li>
-            <li>No passwords, tokens or credentials</li>
-            <li>No real email addresses</li>
-            <li>No calendar, inbox or practice system connection</li>
-            <li>Export is manual and user-controlled</li>
-          </ul>
-        </section>
-
         <section class="panel panel--xena" aria-labelledby="xena-title">
           <div class="panel__header panel__header--split">
             <div>
@@ -244,6 +196,17 @@
             </form>
           </details>
         </section>
+
+        <details class="notice-panel notice-panel--footer">
+          <summary class="notice-panel__summary">
+            <span class="notice-panel__badge" aria-hidden="true">i</span>
+            <span>Privacy, backup and Phase 1 settings</span>
+          </summary>
+          <div class="notice-panel__body">
+            <p>Keep this dashboard to general admin information only: no client names, matter details, passwords, credentials or real email addresses.</p>
+            <p><strong>Back up before changing devices or clearing browser data.</strong> Use Export JSON backup in Information for Xena, then Import JSON to restore it later.</p>
+          </div>
+        </details>
       </div>
     </main>
 
