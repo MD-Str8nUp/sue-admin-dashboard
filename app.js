@@ -11,6 +11,7 @@ const initialState = {
   busyBlocks: [],
   tasks: [],
   deadlines: [],
+  completionHistory: [],
   xenaInfo: {
     schedule: "",
     inboxLabels: "",
@@ -145,6 +146,7 @@ function stateForStorage(nextState) {
     busyBlocks: Array.isArray(merged.busyBlocks) ? merged.busyBlocks : [],
     tasks: Array.isArray(merged.tasks) ? merged.tasks : [],
     deadlines: Array.isArray(merged.deadlines) ? merged.deadlines : [],
+    completionHistory: Array.isArray(merged.completionHistory) ? merged.completionHistory : [],
     xenaInfo: {
       ...initialState.xenaInfo,
       ...(merged.xenaInfo && typeof merged.xenaInfo === "object" ? merged.xenaInfo : {})
@@ -362,6 +364,8 @@ function taskActions(item) {
         if (match) {
           try {
             await sheetWrite("updateTaskStatus", { rowNumber: Number(match[1]), status: nextStatus });
+            recordTaskCompletion(item, nextStatus);
+            renderAll();
             setApiStatus("Saved to Google Sheet.", "success");
             return;
           } catch (err) {
@@ -369,6 +373,7 @@ function taskActions(item) {
           }
         }
         item.status = nextStatus;
+        recordTaskCompletion(item, nextStatus);
         saveState();
         renderAll();
       }
@@ -391,6 +396,17 @@ function taskActions(item) {
     },
     { label: "Delete", danger: true, onClick: () => removeTask(item.id) }
   ];
+}
+
+function recordTaskCompletion(item, status) {
+  const key = String(item.id || item.title || "");
+  if (status === "Done") {
+    state.completionHistory.unshift({ id: createId(), taskKey: key, title: item.title || "Completed task", completedAt: new Date().toISOString() });
+  } else {
+    const index = state.completionHistory.findIndex((entry) => entry.taskKey === key);
+    if (index >= 0) state.completionHistory.splice(index, 1);
+  }
+  saveState();
 }
 
 function renderSummary() {
@@ -432,7 +448,7 @@ function renderAll() {
   renderTodayBlocks();
 
   const todayTasks = state.tasks.filter((item) => item.due === today() && item.status !== "Done");
-  const weekTasks = state.tasks.filter((item) => item.due !== today() || item.status === "Done");
+  const weekTasks = state.tasks.filter((item) => item.due !== today() && item.status !== "Done");
 
   renderItemList({
     key: "tasks",
@@ -485,6 +501,29 @@ function renderAll() {
   });
 
   fillXenaForm();
+  renderProgress();
+}
+
+function renderProgress() {
+  const history = document.getElementById("progress-history");
+  if (!history) return;
+  const monday = new Date();
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const completedThisWeek = state.completionHistory.filter((entry) => new Date(entry.completedAt) >= monday).length;
+  document.getElementById("progress-completed").textContent = String(completedThisWeek);
+  document.getElementById("progress-open").textContent = String(state.tasks.filter((item) => item.status !== "Done").length);
+  document.getElementById("progress-reminders").textContent = String(state.deadlines.filter((item) => item.date && item.date >= today()).length);
+  history.innerHTML = "";
+  if (!state.completionHistory.length) {
+    const empty = document.createElement("li"); empty.className = "empty"; empty.textContent = "Completed tasks will appear here with the date they were marked done."; history.append(empty); return;
+  }
+  state.completionHistory.slice(0, 30).forEach((entry) => {
+    const row = document.createElement("li"); row.className = "progress-history__item";
+    const title = document.createElement("strong"); title.textContent = entry.title;
+    const date = document.createElement("span"); date.textContent = `Completed ${formatDateTime(entry.completedAt)}`;
+    row.append(title, date); history.append(row);
+  });
 }
 
 function renderTodayBlocks() {
@@ -1435,6 +1474,7 @@ function setupPersonalHealth() {
 function setupDashboardTabs() {
   const tabs = [
     { tab: document.getElementById("work-tab"), panel: document.getElementById("work-panel") },
+    { tab: document.getElementById("progress-tab"), panel: document.getElementById("progress-panel") },
     { tab: document.getElementById("health-tab"), panel: document.getElementById("health-panel") }
   ];
 

@@ -35,6 +35,7 @@
     <main class="shell" id="main">
       <nav class="view-tabs" role="tablist" aria-label="Dashboard sections">
         <button class="view-tab" id="work-tab" type="button" role="tab" aria-selected="true" aria-controls="work-panel">Work</button>
+        <button class="view-tab" id="progress-tab" type="button" role="tab" aria-selected="false" aria-controls="progress-panel" tabindex="-1">Progress</button>
         <button class="view-tab" id="health-tab" type="button" role="tab" aria-selected="false" aria-controls="health-panel" tabindex="-1">Health</button>
       </nav>
 
@@ -337,6 +338,22 @@
         </form>
         </div>
       </details>
+      </section>
+
+      <section id="progress-panel" class="tab-panel" role="tabpanel" aria-labelledby="progress-tab" hidden>
+        <section class="panel progress-panel" aria-labelledby="progress-title">
+          <div class="panel__header">
+            <h2 id="progress-title" class="section-title">Work progress</h2>
+            <p class="section-hint">A running record of completed work. Active tasks stay in Work.</p>
+          </div>
+          <div class="progress-stats" aria-label="This week’s work summary">
+            <div><span>Completed this week</span><strong id="progress-completed">0</strong></div>
+            <div><span>Still open</span><strong id="progress-open">0</strong></div>
+            <div><span>Reminders due</span><strong id="progress-reminders">0</strong></div>
+          </div>
+          <h3 class="progress-subtitle">Completed work</h3>
+          <ul class="list progress-history" id="progress-history"></ul>
+        </section>
       </section>
 
       <section id="health-panel" class="tab-panel" role="tabpanel" aria-labelledby="health-tab" hidden>
