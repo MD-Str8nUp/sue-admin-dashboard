@@ -40,8 +40,8 @@ const demoState = {
     }
   ],
   busyBlocks: [
-    { id: "demo-busy-1", start: "09:00", end: "12:00", label: "Awarely — busy" },
-    { id: "demo-busy-2", start: "14:00", end: "17:00", label: "Feel Good — busy" }
+    { id: "demo-busy-1", start: "09:00", end: "12:00", practice: "Awarely", purpose: "Complete session notes", nextStep: "Prepare any follow-up draft before the block ends." },
+    { id: "demo-busy-2", start: "14:00", end: "17:00", practice: "Feel Good", purpose: "Session administration", nextStep: "Check notes and complete the next required action." }
   ],
   tasks: [
     { id: "demo-task-1", title: "Complete notes", due: today(), status: "Open" },
@@ -280,6 +280,37 @@ function removeTask(id) {
   removeItem("tasks", id);
 }
 
+function busyBlockDetails(item) {
+  if (item.practice || item.purpose) {
+    return {
+      practice: item.practice || "General admin",
+      purpose: item.purpose || item.label || "Work block",
+      nextStep: item.nextStep || ""
+    };
+  }
+  const legacy = String(item.label || "Work block");
+  const parts = legacy.split("—");
+  return {
+    practice: parts[0].trim() || "General admin",
+    purpose: parts.slice(1).join("—").trim() || legacy,
+    nextStep: ""
+  };
+}
+
+function focusClinicalTool(practice, tool) {
+  document.getElementById("clinical-practice").value = practice === "Feel Good" ? "Feelgood" : "Awarely";
+  const targetId = tool === "email" ? "email-draft-title" : "clinical-note-title";
+  document.getElementById(targetId).scrollIntoView({ behavior: "smooth", block: "start" });
+  if (tool === "email") document.getElementById("email-purpose").focus();
+  else document.getElementById("clinical-raw-notes").focus();
+}
+
+function markBusyBlockDone(item) {
+  item.completed = !item.completed;
+  saveState();
+  renderAll();
+}
+
 function taskActions(item) {
   return [
     {
@@ -375,26 +406,7 @@ function renderAll() {
     ]
   });
 
-  renderItemList({
-    key: "busyBlocks",
-    targetId: "busy-list",
-    emptyText: "No busy blocks for today.",
-    title: (item) => item.label,
-    meta: (item) => `${item.start}–${item.end}`,
-    actions: (item) => [
-      {
-        label: "Edit",
-        onClick: () => {
-          const label = promptText("Edit generic label", item.label);
-          if (!label) return;
-          item.label = label;
-          saveState();
-          renderAll();
-        }
-      },
-      { label: "Delete", danger: true, onClick: () => removeItem("busyBlocks", item.id) }
-    ]
-  });
+  renderTodayBlocks();
 
   const todayTasks = state.tasks.filter((item) => item.due === today() && item.status !== "Done");
   const weekTasks = state.tasks.filter((item) => item.due !== today() || item.status === "Done");
@@ -450,6 +462,46 @@ function renderAll() {
   });
 
   fillXenaForm();
+}
+
+function renderTodayBlocks() {
+  const list = document.getElementById("busy-list");
+  list.innerHTML = "";
+  if (!state.busyBlocks.length) {
+    const empty = document.createElement("li");
+    empty.className = "empty";
+    empty.textContent = "No planned work blocks for today.";
+    list.append(empty);
+    return;
+  }
+  state.busyBlocks.forEach((item) => {
+    const info = busyBlockDetails(item);
+    const node = document.createElement("li");
+    node.className = `today-block${item.completed ? " is-done" : ""}`;
+    const time = document.createElement("div"); time.className = "today-block__time"; time.textContent = `${item.start}–${item.end}`;
+    const main = document.createElement("div"); main.className = "today-block__main";
+    const practice = document.createElement("span"); practice.className = "today-block__practice"; practice.textContent = info.practice;
+    const purpose = document.createElement("strong"); purpose.textContent = info.purpose;
+    main.append(practice, purpose);
+    if (info.nextStep) { const next = document.createElement("span"); next.className = "today-block__next"; next.textContent = `Next: ${info.nextStep}`; main.append(next); }
+    node.append(time, main);
+    const actions = document.createElement("div");
+    actions.className = "today-block__actions";
+    const note = document.createElement("button"); note.type = "button"; note.className = "mini-button"; note.textContent = "Start notes"; note.addEventListener("click", () => focusClinicalTool(info.practice, "notes"));
+    const email = document.createElement("button"); email.type = "button"; email.className = "mini-button"; email.textContent = "Follow-up"; email.addEventListener("click", () => focusClinicalTool(info.practice, "email"));
+    const done = document.createElement("button"); done.type = "button"; done.className = "mini-button"; done.textContent = item.completed ? "Reopen" : "Done"; done.addEventListener("click", () => markBusyBlockDone(item));
+    actions.append(note, email, done);
+    const manage = document.createElement("details"); manage.className = "today-block__manage";
+    manage.innerHTML = "<summary>More</summary>";
+    const edit = document.createElement("button"); edit.type = "button"; edit.className = "mini-button"; edit.textContent = "Edit"; edit.addEventListener("click", () => {
+      const purpose = promptText("Edit purpose / next action", info.purpose); if (!purpose) return;
+      const nextStep = promptText("Edit optional next step", info.nextStep); if (nextStep === null) return;
+      item.practice = info.practice; item.purpose = purpose; item.nextStep = nextStep; saveState(); renderAll();
+    });
+    const remove = document.createElement("button"); remove.type = "button"; remove.className = "mini-button mini-button--danger"; remove.textContent = "Delete"; remove.addEventListener("click", () => removeItem("busyBlocks", item.id));
+    manage.append(edit, remove); actions.append(manage);
+    node.append(actions); list.append(node);
+  });
 }
 
 function sortBusyBlocks() {
@@ -903,7 +955,9 @@ function setupForms() {
       id: createId(),
       start: document.getElementById("busy-start").value,
       end: document.getElementById("busy-end").value,
-      label: document.getElementById("busy-label").value.trim()
+      practice: document.getElementById("busy-practice").value,
+      purpose: document.getElementById("busy-purpose").value.trim(),
+      nextStep: document.getElementById("busy-next-step").value.trim()
     };
     state.busyBlocks.push(block);
     sortBusyBlocks();

@@ -213,9 +213,23 @@
                   <input id="busy-end" type="time" required>
                 </label>
               </div>
+              <div class="form__row">
+                <label class="field">
+                  <span class="field__label">Practice</span>
+                  <select id="busy-practice">
+                    <option value="Awarely">Awarely</option>
+                    <option value="Feel Good">Feel Good</option>
+                    <option value="General admin">General admin</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field__label">Purpose / next action</span>
+                  <input id="busy-purpose" type="text" maxlength="80" placeholder="Complete notes, prepare follow-up, admin" required>
+                </label>
+              </div>
               <label class="field">
-                <span class="field__label">Generic label</span>
-                <input id="busy-label" type="text" maxlength="80" placeholder="Admin, appointment, travel, focus time" required>
+                <span class="field__label">Optional next step</span>
+                <input id="busy-next-step" type="text" maxlength="120" placeholder="Example: send reviewed follow-up email">
               </label>
               <button class="button" type="submit">Add block</button>
             </form>
