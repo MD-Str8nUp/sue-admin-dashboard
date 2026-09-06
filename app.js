@@ -284,8 +284,19 @@ function taskActions(item) {
   return [
     {
       label: item.status === "Done" ? "Reopen" : "Done",
-      onClick: () => {
-        item.status = item.status === "Done" ? "Open" : "Done";
+      onClick: async () => {
+        const nextStatus = item.status === "Done" ? "Open" : "Done";
+        const match = /^sheet-task-(\d+)$/.exec(String(item.id || ""));
+        if (match) {
+          try {
+            await sheetWrite("updateTaskStatus", { rowNumber: Number(match[1]), status: nextStatus });
+            setApiStatus("Saved to Google Sheet.", "success");
+            return;
+          } catch (err) {
+            setApiStatus("Sheet unavailable — updated in this browser only.", "error");
+          }
+        }
+        item.status = nextStatus;
         saveState();
         renderAll();
       }
@@ -870,11 +881,17 @@ function setupEmailDraft() {
 }
 
 function setupForms() {
-  document.getElementById("capture-form").addEventListener("submit", (event) => {
+  document.getElementById("capture-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const text = document.getElementById("capture-text").value.trim();
     if (!text) return;
-    state.captures.unshift({ id: createId(), text, createdAt: new Date().toISOString() });
+    try {
+      await sheetWrite("addTask", { task: text, type: "Admin", priority: "Normal", status: "Open", dueDate: "" });
+      setApiStatus("Saved to Google Sheet.", "success");
+    } catch (err) {
+      state.captures.unshift({ id: createId(), text, createdAt: new Date().toISOString() });
+      setApiStatus("Sheet unavailable — saved in this browser only.", "error");
+    }
     event.target.reset();
     saveState();
     renderAll();
@@ -895,14 +912,19 @@ function setupForms() {
     renderAll();
   });
 
-  document.getElementById("task-form").addEventListener("submit", (event) => {
+  document.getElementById("task-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    state.tasks.push({
-      id: createId(),
-      title: document.getElementById("task-title").value.trim(),
-      due: document.getElementById("task-due").value,
-      status: document.getElementById("task-status").value
-    });
+    const task = document.getElementById("task-title").value.trim();
+    if (!task) return;
+    const due = document.getElementById("task-due").value;
+    const status = document.getElementById("task-status").value;
+    try {
+      await sheetWrite("addTask", { task, type: "Admin", priority: "Normal", status, dueDate: due });
+      setApiStatus("Saved to Google Sheet.", "success");
+    } catch (err) {
+      state.tasks.push({ id: createId(), title: task, due, status });
+      setApiStatus("Sheet unavailable — saved in this browser only.", "error");
+    }
     event.target.reset();
     saveState();
     renderAll();
@@ -1076,7 +1098,7 @@ function healthRender() {
     btn.innerHTML = `<span class="personal-health__day-name">${HEALTH_DAY_NAMES[i]}</span>` +
       `<span>${dayNum}</span>` +
       `<span class="personal-health__day-mark" aria-hidden="true">${done ? "✓" : "○"}</span>`;
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       if (healthState.days[iso]) {
         delete healthState.days[iso];
       } else {
@@ -1084,6 +1106,12 @@ function healthRender() {
       }
       healthSave();
       healthRender();
+      try {
+        await sheetWrite("setPersonalMinutes", { dateKey: iso, minutes: healthState.days[iso] ? 35 : 0 });
+        healthSetStatus("Saved to Google Sheet.", "success");
+      } catch (err) {
+        healthSetStatus("Sheet unavailable — saved in this browser only.", "error");
+      }
     });
     li.append(btn);
     daysList.append(li);
@@ -1101,12 +1129,19 @@ function healthRender() {
   healthRenderPips(document.getElementById("health-yoga-pips"), healthState.yoga, HEALTH_TARGETS.yoga);
 }
 
-function healthAdjust(field, delta) {
+async function healthAdjust(field, delta) {
   const next = Math.max(0, Math.min(14, healthState[field] + delta));
   if (next === healthState[field]) return;
   healthState[field] = next;
   healthSave();
   healthRender();
+  const action = delta > 0 ? "addPersonalSession" : "undoPersonalSession";
+  try {
+    await sheetWrite(action, { kind: field });
+    healthSetStatus("Saved to Google Sheet.", "success");
+  } catch (err) {
+    healthSetStatus("Sheet unavailable — saved in this browser only.", "error");
+  }
 }
 
 function setupPersonalHealth() {
@@ -1163,7 +1198,7 @@ setupDashboardTabs();
 renderAll();
 hydrateFromSheetApi();
 
-function jsonpGet(action, timeoutMs = SHEET_API_TIMEOUT_MS) {
+function jsonpGet(action, payload = null, timeoutMs = SHEET_API_TIMEOUT_MS) {
   return new Promise((resolve, reject) => {
     const cbName = `__sueSheetCb_${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
     const script = document.createElement("script");
@@ -1194,10 +1229,18 @@ function jsonpGet(action, timeoutMs = SHEET_API_TIMEOUT_MS) {
       reject(new Error("sheet api timeout"));
     }, timeoutMs);
 
+    const params = new URLSearchParams({ action, callback: cbName });
+    if (payload !== null) params.set("payload", JSON.stringify(payload));
     const sep = SHEET_API_URL.includes("?") ? "&" : "?";
-    script.src = `${SHEET_API_URL}${sep}action=${encodeURIComponent(action)}&callback=${cbName}`;
+    script.src = `${SHEET_API_URL}${sep}${params.toString()}`;
     document.head.append(script);
   });
+}
+
+async function sheetWrite(action, payload) {
+  const result = await jsonpGet(action, payload);
+  await hydrateFromSheetApi();
+  return result;
 }
 
 function normaliseSheetStatus(raw) {
