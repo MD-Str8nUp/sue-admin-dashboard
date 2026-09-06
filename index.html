@@ -45,6 +45,15 @@
       </div>
 
       <section id="work-panel" class="tab-panel" role="tabpanel" aria-labelledby="work-tab">
+      <section class="calendar-placeholder" aria-labelledby="calendar-placeholder-title">
+        <div>
+          <span class="calendar-placeholder__eyebrow">Calendar</span>
+          <h2 id="calendar-placeholder-title" class="calendar-placeholder__title">Today</h2>
+          <p class="calendar-placeholder__date" id="calendar-placeholder-date">Loading today…</p>
+        </div>
+        <p class="calendar-placeholder__message">Calendar connection coming later</p>
+      </section>
+
       <section class="panel quick-capture-panel" aria-labelledby="capture-title">
         <div class="panel__header panel__header--split">
           <div>
@@ -83,15 +92,6 @@
           <p class="import-status import-status--info" id="capture-submit-status" role="status" aria-live="polite"></p>
         </form>
           <p class="section-hint capture-result-note">Saved tasks and reminders appear in Today and This week.</p>
-      </section>
-
-      <section class="calendar-placeholder" aria-labelledby="calendar-placeholder-title">
-        <div>
-          <span class="calendar-placeholder__eyebrow">Calendar</span>
-          <h2 id="calendar-placeholder-title" class="calendar-placeholder__title">Today</h2>
-          <p class="calendar-placeholder__date" id="calendar-placeholder-date">Loading today…</p>
-        </div>
-        <p class="calendar-placeholder__message">Calendar connection coming later</p>
       </section>
 
       <div class="dashboard-grid" aria-label="Dashboard workspace">
