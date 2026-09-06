@@ -48,43 +48,6 @@ textarea {
   font: inherit;
 }
 
-.view-tabs {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  margin: 18px 0 14px;
-  padding: 5px;
-  background: #e7eff8;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-}
-
-.view-tab {
-  min-height: 46px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--navy-soft);
-  font-weight: 750;
-  cursor: pointer;
-}
-
-.view-tab.is-active,
-.view-tab[aria-selected="true"] {
-  background: var(--navy);
-  color: #fff;
-  box-shadow: 0 2px 7px rgba(18, 38, 63, 0.2);
-}
-
-.view-tab:focus-visible {
-  outline: 3px solid #407ab4;
-  outline-offset: 2px;
-}
-
-.tab-panel[hidden] {
-  display: none !important;
-}
-
 button {
   cursor: pointer;
 }
@@ -309,8 +272,28 @@ h2 {
 }
 
 .tab-panel[hidden] {
-  display: none;
+  display: none !important;
 }
+
+.materials-box {
+  display: grid;
+  gap: 8px;
+}
+
+.material-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.material-item input { margin-top: 3px; min-width: 18px; min-height: 18px; }
+.material-text { min-width: 0; }
+.material-name { display: block; font-weight: 700; }
+.material-reference { display: block; margin-top: 3px; font-size: 0.88rem; overflow-wrap: anywhere; }
 
 /* -------- Notice panel -------- */
 

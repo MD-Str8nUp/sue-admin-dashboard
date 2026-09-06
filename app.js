@@ -744,6 +744,131 @@ function setupClinicalNoteFormatter() {
   updateClinicalPreview();
 }
 
+let testMaterials = [
+  { name: "Reflection Worksheet — TEST ONLY", reference: "", selected: true, dummy: true },
+  { name: "Grounding Information Sheet — TEST ONLY", reference: "", selected: false, dummy: true },
+  { name: "Community Referral Resource — TEST ONLY", reference: "", selected: false, dummy: true }
+];
+
+function isHttpUrl(value) {
+  try {
+    const url = new URL(String(value || "").trim());
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function materialSourceIsApproved() {
+  return backendMaterialsSource === "approved";
+}
+
+function renderMaterialsChecklist() {
+  const box = document.getElementById("materials-checklist");
+  const label = document.getElementById("materials-source-label");
+  const addRow = document.getElementById("dummy-material-add-row");
+  if (!box || !label || !addRow) return;
+
+  label.textContent = materialSourceIsApproved()
+    ? "Approved materials from Google Sheet"
+    : "Temporary dummy materials";
+  addRow.hidden = materialSourceIsApproved();
+  box.innerHTML = "";
+
+  testMaterials.forEach((item, index) => {
+    const row = document.createElement("label");
+    row.className = "material-item";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = Boolean(item.selected);
+    checkbox.addEventListener("change", () => { testMaterials[index].selected = checkbox.checked; });
+    const text = document.createElement("span");
+    text.className = "material-text";
+    const name = document.createElement("span");
+    name.className = "material-name";
+    name.textContent = item.name;
+    text.append(name);
+    if (item.reference) {
+      const reference = document.createElement("span");
+      reference.className = "material-reference";
+      if (isHttpUrl(item.reference)) {
+        const link = document.createElement("a");
+        link.href = item.reference;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "View attachment";
+        reference.append(link);
+      } else {
+        reference.textContent = `Reference: ${item.reference}`;
+      }
+      text.append(reference);
+    }
+    row.append(checkbox, text);
+    box.append(row);
+  });
+}
+
+function emailDraftText() {
+  const purpose = document.getElementById("email-purpose").value;
+  const recipient = document.getElementById("email-test-recipient").value.trim() || "[test recipient]";
+  const materials = testMaterials.filter((item) => item.selected);
+  const materialLines = materials.length
+    ? materials.map((item) => `- ${item.name}${item.reference ? `\n  View attachment: ${item.reference}` : ""}`).join("\n")
+    : "- [No materials selected.]";
+  return {
+    subject: `Test ${purpose.toLowerCase()} draft`,
+    body: [
+      `Hi ${recipient},`, "", "This is a temporary editable test draft.", "",
+      "Selected materials", materialLines, "", "Next steps", "- [Edit test follow-up text here.]", "",
+      "Kind regards,", "Sue"
+    ].join("\n")
+  };
+}
+
+function setEmailStatus(message, type = "info") {
+  const status = document.getElementById("email-draft-status");
+  status.textContent = message;
+  status.className = `import-status import-status--${type}`;
+}
+
+function setupEmailDraft() {
+  const output = document.getElementById("email-draft-output");
+  document.getElementById("generate-email-draft").addEventListener("click", () => {
+    output.value = emailDraftText().body;
+    setEmailStatus("Editable test draft generated. Nothing has been sent.", "success");
+  });
+  document.getElementById("add-material").addEventListener("click", () => {
+    if (materialSourceIsApproved()) return;
+    const input = document.getElementById("new-material-input");
+    const name = input.value.trim();
+    if (!name) return;
+    testMaterials.push({ name: name.slice(0, 120), reference: "", selected: true, dummy: true });
+    input.value = "";
+    renderMaterialsChecklist();
+  });
+  document.getElementById("copy-email-draft").addEventListener("click", async () => {
+    if (!output.value) output.value = emailDraftText().body;
+    try {
+      await navigator.clipboard.writeText(output.value);
+      setEmailStatus("Draft copied. Review it before using it.", "success");
+    } catch {
+      output.focus(); output.select();
+      setEmailStatus("Draft selected for manual copy.", "info");
+    }
+  });
+  document.getElementById("open-gmail-draft").addEventListener("click", () => {
+    const draft = emailDraftText();
+    const body = output.value || draft.body;
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(body)}`, "_blank", "noopener");
+    setEmailStatus("Opened a draft window for manual review only.", "success");
+  });
+  document.getElementById("clear-email-draft").addEventListener("click", () => {
+    output.value = "";
+    setEmailStatus("Test draft cleared from this page.", "info");
+  });
+  renderMaterialsChecklist();
+}
+
 function setupForms() {
   document.getElementById("capture-form").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1031,6 +1156,7 @@ function setupDashboardTabs() {
 }
 
 setupClinicalNoteFormatter();
+setupEmailDraft();
 setupForms();
 setupPersonalHealth();
 setupDashboardTabs();
@@ -1222,7 +1348,22 @@ async function hydrateFromSheetApi() {
   }
 
   if (materials.status === "fulfilled") {
-    window.__sueApprovedMaterials = materials.value;
+    const rows = Array.isArray(materials.value && materials.value.rows) ? materials.value.rows : [];
+    const approved = rows.filter((row) => row && row.approved && row.name);
+    if (approved.length) {
+      testMaterials = approved.map((row, index) => ({
+        name: String(row.name),
+        reference: String(row.reference || ""),
+        selected: index === 0,
+        dummy: false
+      }));
+      backendMaterials = approved;
+      backendMaterialsSource = "approved";
+    } else {
+      backendMaterials = [];
+      backendMaterialsSource = "dummy";
+    }
+    renderMaterialsChecklist();
   } else {
     failures.push(`materials (${materials.reason && materials.reason.message})`);
   }
