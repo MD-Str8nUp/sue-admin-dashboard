@@ -17,7 +17,7 @@ Standalone Phase 1 static dashboard for privacy-first personal admin.
 
 ## Features
 
-- Today workload busy blocks with generic editable labels.
+- Today workload busy blocks with time, practice, purpose, optional checklist/follow-up, notes shortcut, follow-up task creation and local complete/reopen state.
 - Action queue task create, read, update, complete and delete.
 - Upcoming deadlines create, read, update and delete, with dates and reminder lead time.
 - Quick capture for general notes.

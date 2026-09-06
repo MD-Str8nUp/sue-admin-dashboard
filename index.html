@@ -51,29 +51,151 @@
           <h2 id="calendar-placeholder-title" class="calendar-placeholder__title">Today</h2>
           <p class="calendar-placeholder__date" id="calendar-placeholder-date">Loading today…</p>
         </div>
-        <p class="calendar-placeholder__message">Calendar connection coming later.</p>
+        <p class="calendar-placeholder__message">Calendar connection coming later</p>
       </section>
 
-      <section class="panel backend-snapshot" aria-labelledby="backend-snapshot-title">
-        <div class="panel__header panel__header--split">
-          <div>
-            <h2 id="backend-snapshot-title" class="section-title">Sheet-backed snapshot</h2>
-            <p class="section-hint">Optional read-only view from the configured Apps Script backend.</p>
+      <div class="dashboard-grid" aria-label="Dashboard workspace">
+        <section class="panel dashboard-card" aria-labelledby="today-title">
+          <div class="panel__header">
+            <h2 id="today-title" class="section-title">Today</h2>
           </div>
-          <span class="save-state" id="backend-state">Local fallback</span>
-        </div>
-        <div class="backend-snapshot__body" id="backend-snapshot">
-          <p class="empty">Loading the read-only Sheet snapshot…</p>
-        </div>
-        <div class="actions">
-          <button class="button button--ghost" id="backend-refresh" type="button">Refresh Sheet snapshot</button>
-        </div>
-      </section>
+          <ul class="list list--timeline" id="busy-list"></ul>
+          <ul class="list list--checks" id="today-task-list"></ul>
+          <details class="add-drawer">
+            <summary class="add-drawer__summary">Add today block</summary>
+            <form class="form" id="busy-form">
+              <div class="form__row">
+                <label class="field">
+                  <span class="field__label">Start</span>
+                  <input id="busy-start" type="time" required>
+                </label>
+                <label class="field">
+                  <span class="field__label">End</span>
+                  <input id="busy-end" type="time" required>
+                </label>
+              </div>
+              <div class="form__row">
+                <label class="field">
+                  <span class="field__label">Practice</span>
+                  <select id="busy-practice">
+                    <option value="Awarely">Awarely</option>
+                    <option value="Feel Good">Feel Good</option>
+                    <option value="General admin">General admin</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field__label">Purpose / next action</span>
+                  <input id="busy-purpose" type="text" maxlength="80" placeholder="Complete notes, prepare follow-up, admin" required>
+                </label>
+              </div>
+              <label class="field">
+                <span class="field__label">Optional checklist / follow-up</span>
+                <textarea id="busy-next-step" rows="3" maxlength="240" placeholder="Example: send reviewed follow-up email&#10;Check note is complete"></textarea>
+              </label>
+              <button class="button" type="submit">Add block</button>
+            </form>
+          </details>
+        </section>
 
-      <details class="panel collapsible-panel clinical-note" aria-labelledby="clinical-note-title">
+        <section class="panel dashboard-card" aria-labelledby="week-title">
+          <div class="panel__header">
+            <h2 id="week-title" class="section-title">This week</h2>
+          </div>
+          <ul class="list list--checks" id="task-list"></ul>
+          <details class="add-drawer">
+            <summary class="add-drawer__summary">Add or manage tasks</summary>
+            <form class="form" id="task-form">
+              <label class="field">
+                <span class="field__label">Task</span>
+                <input id="task-title" type="text" maxlength="120" placeholder="General admin action" required>
+              </label>
+              <div class="form__row">
+                <label class="field">
+                  <span class="field__label">Due</span>
+                  <input id="task-due" type="date">
+                </label>
+                <label class="field">
+                  <span class="field__label">Status</span>
+                  <select id="task-status">
+                    <option value="Open">Open</option>
+                    <option value="Waiting">Waiting</option>
+                    <option value="Done">Done</option>
+                  </select>
+                </label>
+              </div>
+              <button class="button" type="submit">Add task</button>
+            </form>
+          </details>
+        </section>
+
+        <section class="panel dashboard-card" aria-labelledby="deadlines-title">
+          <div class="panel__header">
+            <h2 id="deadlines-title" class="section-title">Upcoming deadlines</h2>
+          </div>
+          <ul class="list list--deadlines" id="deadline-list"></ul>
+          <details class="add-drawer">
+            <summary class="add-drawer__summary">Add deadline</summary>
+            <form class="form" id="deadline-form">
+              <label class="field">
+                <span class="field__label">Deadline label</span>
+                <input id="deadline-title" type="text" maxlength="120" placeholder="Renewal, lodgement, payment, review" required>
+              </label>
+              <div class="form__row">
+                <label class="field">
+                  <span class="field__label">Date</span>
+                  <input id="deadline-date" type="date" required>
+                </label>
+                <label class="field">
+                  <span class="field__label">Lead time</span>
+                  <input id="deadline-lead" type="number" min="0" max="365" value="7" required>
+                </label>
+              </div>
+              <button class="button" type="submit">Add deadline</button>
+            </form>
+          </details>
+        </section>
+
+        <section class="panel dashboard-card" aria-labelledby="capture-title">
+          <div class="panel__header">
+            <h2 id="capture-title" class="section-title">Quick capture a task or reminder</h2>
+            <p class="section-hint">Speak or type it once. Review the date and reminder before saving.</p>
+          </div>
+          <form class="form form--capture" id="capture-form">
+            <label class="field field--grow">
+              <span class="field__label">What do you need to do?</span>
+              <textarea id="capture-text" rows="3" placeholder="Example: Renew my practising certificate by 13 September 2026. Remind me 2 days beforehand."></textarea>
+            </label>
+            <div class="actions">
+              <button class="button button--ghost" id="capture-speak" type="button">Speak task</button>
+            </div>
+            <div class="form__row">
+              <label class="field">
+                <span class="field__label">Due date</span>
+                <input id="capture-due" type="date">
+              </label>
+              <label class="field">
+                <span class="field__label">Reminder before due</span>
+                <select id="capture-reminder-days">
+                  <option value="0">No separate reminder</option>
+                  <option value="1">1 day before</option>
+                  <option value="2" selected>2 days before</option>
+                  <option value="3">3 days before</option>
+                  <option value="7">7 days before</option>
+                  <option value="14">14 days before</option>
+                </select>
+              </label>
+            </div>
+            <p class="capture-preview" id="capture-preview">Add a task, then choose its due date and reminder.</p>
+            <button class="button" type="submit">Add task and reminder</button>
+          </form>
+          <ul class="list list--bullets" id="capture-list" aria-live="polite"></ul>
+        </section>
+      </div>
+
+      <details class="panel collapsible-panel clinical-note" id="clinical-note-panel" aria-labelledby="clinical-note-title">
         <summary class="collapsible-panel__summary">
-          <span><strong id="clinical-note-title">Clinic note formatter</strong><small>Prepare and copy a session note</small></span>
-          <span class="collapsible-panel__state">Open</span>
+          <span><strong id="clinical-note-title">Clinical note formatter</strong><small>Separate drop-down for preparing and copying a session note</small></span>
+          <span class="collapsible-panel__state" aria-hidden="true"></span>
         </summary>
         <div class="collapsible-panel__body">
         <div class="panel__header panel__header--split">
@@ -150,10 +272,10 @@
         </div>
       </details>
 
-      <details class="panel collapsible-panel email-draft" aria-labelledby="email-draft-title">
+      <details class="panel collapsible-panel email-draft" id="email-draft-panel" aria-labelledby="email-draft-title">
         <summary class="collapsible-panel__summary">
-          <span><strong id="email-draft-title">After-session draft email</strong><small>Select materials and open a review draft</small></span>
-          <span class="collapsible-panel__state">Open</span>
+          <span><strong id="email-draft-title">Post-session email draft</strong><small>Separate drop-down for selecting materials and opening a review draft</small></span>
+          <span class="collapsible-panel__state" aria-hidden="true"></span>
         </summary>
         <div class="collapsible-panel__body">
         <div class="panel__header panel__header--split">
@@ -211,122 +333,6 @@
         </form>
         </div>
       </details>
-
-      <div class="dashboard-grid" aria-label="Dashboard workspace">
-        <section class="panel dashboard-card" aria-labelledby="today-title">
-          <div class="panel__header">
-            <h2 id="today-title" class="section-title">Today</h2>
-          </div>
-          <ul class="list list--timeline" id="busy-list"></ul>
-          <ul class="list list--checks" id="today-task-list"></ul>
-          <details class="add-drawer">
-            <summary class="add-drawer__summary">Add today block</summary>
-            <form class="form" id="busy-form">
-              <div class="form__row">
-                <label class="field">
-                  <span class="field__label">Start</span>
-                  <input id="busy-start" type="time" required>
-                </label>
-                <label class="field">
-                  <span class="field__label">End</span>
-                  <input id="busy-end" type="time" required>
-                </label>
-              </div>
-              <div class="form__row">
-                <label class="field">
-                  <span class="field__label">Practice</span>
-                  <select id="busy-practice">
-                    <option value="Awarely">Awarely</option>
-                    <option value="Feel Good">Feel Good</option>
-                    <option value="General admin">General admin</option>
-                  </select>
-                </label>
-                <label class="field">
-                  <span class="field__label">Purpose / next action</span>
-                  <input id="busy-purpose" type="text" maxlength="80" placeholder="Complete notes, prepare follow-up, admin" required>
-                </label>
-              </div>
-              <label class="field">
-                <span class="field__label">Optional next step</span>
-                <input id="busy-next-step" type="text" maxlength="120" placeholder="Example: send reviewed follow-up email">
-              </label>
-              <button class="button" type="submit">Add block</button>
-            </form>
-          </details>
-        </section>
-
-        <section class="panel dashboard-card" aria-labelledby="week-title">
-          <div class="panel__header">
-            <h2 id="week-title" class="section-title">This week</h2>
-          </div>
-          <ul class="list list--checks" id="task-list"></ul>
-          <details class="add-drawer">
-            <summary class="add-drawer__summary">Add or manage tasks</summary>
-            <form class="form" id="task-form">
-              <label class="field">
-                <span class="field__label">Task</span>
-                <input id="task-title" type="text" maxlength="120" placeholder="General admin action" required>
-              </label>
-              <div class="form__row">
-                <label class="field">
-                  <span class="field__label">Due</span>
-                  <input id="task-due" type="date">
-                </label>
-                <label class="field">
-                  <span class="field__label">Status</span>
-                  <select id="task-status">
-                    <option value="Open">Open</option>
-                    <option value="Waiting">Waiting</option>
-                    <option value="Done">Done</option>
-                  </select>
-                </label>
-              </div>
-              <button class="button" type="submit">Add task</button>
-            </form>
-          </details>
-        </section>
-
-        <section class="panel dashboard-card" aria-labelledby="deadlines-title">
-          <div class="panel__header">
-            <h2 id="deadlines-title" class="section-title">Upcoming deadlines</h2>
-          </div>
-          <ul class="list list--deadlines" id="deadline-list"></ul>
-          <details class="add-drawer">
-            <summary class="add-drawer__summary">Add deadline</summary>
-            <form class="form" id="deadline-form">
-              <label class="field">
-                <span class="field__label">Deadline label</span>
-                <input id="deadline-title" type="text" maxlength="120" placeholder="Renewal, lodgement, payment, review" required>
-              </label>
-              <div class="form__row">
-                <label class="field">
-                  <span class="field__label">Date</span>
-                  <input id="deadline-date" type="date" required>
-                </label>
-                <label class="field">
-                  <span class="field__label">Lead time</span>
-                  <input id="deadline-lead" type="number" min="0" max="365" value="7" required>
-                </label>
-              </div>
-              <button class="button" type="submit">Add deadline</button>
-            </form>
-          </details>
-        </section>
-
-        <section class="panel dashboard-card" aria-labelledby="capture-title">
-          <div class="panel__header">
-            <h2 id="capture-title" class="section-title">Quick capture</h2>
-          </div>
-          <form class="form form--capture" id="capture-form">
-            <label class="field field--grow">
-              <span class="sr-only">Quick capture</span>
-              <textarea id="capture-text" rows="1" placeholder="Add a reminder or task..."></textarea>
-            </label>
-            <button class="button" type="submit">Add</button>
-          </form>
-          <ul class="list list--bullets" id="capture-list" aria-live="polite"></ul>
-        </section>
-      </div>
       </section>
 
       <section id="health-panel" class="tab-panel" role="tabpanel" aria-labelledby="health-tab" hidden>

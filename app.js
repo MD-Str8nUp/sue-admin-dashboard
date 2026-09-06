@@ -285,7 +285,7 @@ function busyBlockDetails(item) {
     return {
       practice: item.practice || "General admin",
       purpose: item.purpose || item.label || "Work block",
-      nextStep: item.nextStep || ""
+      nextStep: item.nextStep || item.followUp || item.checklist || ""
     };
   }
   const legacy = String(item.label || "Work block");
@@ -299,16 +299,39 @@ function busyBlockDetails(item) {
 
 function focusClinicalTool(practice, tool) {
   document.getElementById("clinical-practice").value = practice === "Feel Good" ? "Feelgood" : "Awarely";
-  const targetId = tool === "email" ? "email-draft-title" : "clinical-note-title";
-  document.getElementById(targetId).scrollIntoView({ behavior: "smooth", block: "start" });
+  const panelId = tool === "email" ? "email-draft-panel" : "clinical-note-panel";
+  const panel = document.getElementById(panelId);
+  panel.open = true;
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
   if (tool === "email") document.getElementById("email-purpose").focus();
   else document.getElementById("clinical-raw-notes").focus();
+}
+
+function busyBlockTime(item) {
+  if (item.start && item.end) return `${item.start}–${item.end}`;
+  if (item.start) return item.start;
+  if (item.end) return `Until ${item.end}`;
+  return "Today";
 }
 
 function markBusyBlockDone(item) {
   item.completed = !item.completed;
   saveState();
   renderAll();
+}
+
+async function createBusyBlockFollowUp(item, info) {
+  const title = (info.nextStep || `Follow up: ${info.purpose}`).trim();
+  const task = `${info.practice}: ${title}`;
+  try {
+    await sheetWrite("addTask", { task, type: "Admin", priority: "Normal", status: "Open", dueDate: today() });
+    setApiStatus("Follow-up added to Google Sheet.", "success");
+  } catch (err) {
+    state.tasks.push({ id: createId(), title: task, due: today(), status: "Open" });
+    saveState();
+    renderAll();
+    setApiStatus("Sheet unavailable — follow-up added in this browser only.", "error");
+  }
 }
 
 function taskActions(item) {
@@ -481,19 +504,24 @@ function renderTodayBlocks() {
     const info = busyBlockDetails(item);
     const node = document.createElement("li");
     node.className = `today-block${item.completed ? " is-done" : ""}`;
-    const time = document.createElement("div"); time.className = "today-block__time"; time.textContent = `${item.start}–${item.end}`;
+    const time = document.createElement("div"); time.className = "today-block__time"; time.textContent = busyBlockTime(item);
     const main = document.createElement("div"); main.className = "today-block__main";
     const practice = document.createElement("span"); practice.className = "today-block__practice"; practice.textContent = info.practice;
     const purpose = document.createElement("strong"); purpose.textContent = info.purpose;
     main.append(practice, purpose);
-    if (info.nextStep) { const next = document.createElement("span"); next.className = "today-block__next"; next.textContent = `Next: ${info.nextStep}`; main.append(next); }
+    if (info.nextStep) {
+      const next = document.createElement("span");
+      next.className = "today-block__next";
+      next.textContent = `Checklist / follow-up: ${info.nextStep}`;
+      main.append(next);
+    }
     node.append(time, main);
     const actions = document.createElement("div");
     actions.className = "today-block__actions";
     const note = document.createElement("button"); note.type = "button"; note.className = "mini-button"; note.textContent = "Start notes"; note.addEventListener("click", () => focusClinicalTool(info.practice, "notes"));
-    const email = document.createElement("button"); email.type = "button"; email.className = "mini-button"; email.textContent = "Follow-up"; email.addEventListener("click", () => focusClinicalTool(info.practice, "email"));
-    const done = document.createElement("button"); done.type = "button"; done.className = "mini-button"; done.textContent = item.completed ? "Reopen" : "Done"; done.addEventListener("click", () => markBusyBlockDone(item));
-    actions.append(note, email, done);
+    const followUp = document.createElement("button"); followUp.type = "button"; followUp.className = "mini-button"; followUp.textContent = "Create follow-up"; followUp.addEventListener("click", () => createBusyBlockFollowUp(item, info));
+    const done = document.createElement("button"); done.type = "button"; done.className = "mini-button"; done.textContent = item.completed ? "Reopen" : "Mark complete"; done.addEventListener("click", () => markBusyBlockDone(item));
+    actions.append(note, followUp, done);
     const manage = document.createElement("details"); manage.className = "today-block__manage";
     manage.innerHTML = "<summary>More</summary>";
     const edit = document.createElement("button"); edit.type = "button"; edit.className = "mini-button"; edit.textContent = "Edit"; edit.addEventListener("click", () => {
@@ -508,7 +536,7 @@ function renderTodayBlocks() {
 }
 
 function sortBusyBlocks() {
-  state.busyBlocks.sort((a, b) => a.start.localeCompare(b.start));
+  state.busyBlocks.sort((a, b) => String(a.start || "").localeCompare(String(b.start || "")));
 }
 
 function sortDeadlines() {
@@ -936,18 +964,89 @@ function setupEmailDraft() {
 }
 
 function setupForms() {
+  const captureText = document.getElementById("capture-text");
+  const captureDue = document.getElementById("capture-due");
+  const captureReminderDays = document.getElementById("capture-reminder-days");
+  const capturePreview = document.getElementById("capture-preview");
+
+  function captureTitle(text) {
+    return text
+      .replace(/\bby\s+(?:next\s+\w+,?\s*)?\d{1,2}\s+[a-z]+\s+\d{4}\b/ig, "")
+      .replace(/\bremind\s+me\s+\d+\s+days?\s+(?:before|beforehand)\b/ig, "")
+      .replace(/\s{2,}/g, " ").replace(/[.;,\s]+$/g, "").trim() || text;
+  }
+
+  function dateFromCaptureText(text) {
+    const months = { january: 0, february: 1, march: 2, april: 3, may: 4, june: 5, july: 6, august: 7, september: 8, october: 9, november: 10, december: 11 };
+    const match = text.match(/\b(?:by\s+)?(?:next\s+\w+,?\s*)?(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(20\d{2})\b/i);
+    if (!match) return "";
+    const date = new Date(Number(match[3]), months[match[2].toLowerCase()], Number(match[1]));
+    return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+  }
+
+  function reminderDaysFromCaptureText(text) {
+    const match = text.match(/\bremind\s+me\s+(\d+|one|two|three|seven|fourteen)\s+days?\s+(?:before|beforehand)\b/i);
+    if (!match) return "";
+    const words = { one: 1, two: 2, three: 3, seven: 7, fourteen: 14 };
+    const count = words[String(match[1]).toLowerCase()] || Number(match[1]);
+    return String(Math.min(365, Math.max(0, count)));
+  }
+
+  function refreshCapturePreview(parseText = false) {
+    if (parseText && !captureDue.value) {
+      const parsedDate = dateFromCaptureText(captureText.value);
+      if (parsedDate) captureDue.value = parsedDate;
+    }
+    if (parseText) {
+      const parsedLead = reminderDaysFromCaptureText(captureText.value);
+      if (parsedLead) captureReminderDays.value = parsedLead;
+    }
+    const task = captureTitle(captureText.value.trim());
+    const due = captureDue.value;
+    const lead = Number(captureReminderDays.value || 0);
+    if (!task) { capturePreview.textContent = "Add a task, then choose its due date and reminder."; return; }
+    if (!due) { capturePreview.textContent = `Will add: ${task}. Add a due date if you want a reminder.`; return; }
+    const reminder = new Date(`${due}T00:00:00`);
+    reminder.setDate(reminder.getDate() - lead);
+    capturePreview.textContent = lead ? `Will add “${task}” due ${formatDate(due)}, plus a reminder on ${formatDate(reminder.toISOString().slice(0, 10))}.` : `Will add “${task}” due ${formatDate(due)}.`;
+  }
+
+  captureText.addEventListener("input", () => refreshCapturePreview(true));
+  captureDue.addEventListener("change", () => refreshCapturePreview(false));
+  captureReminderDays.addEventListener("change", () => refreshCapturePreview(false));
+
+  document.getElementById("capture-speak").addEventListener("click", () => {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) { capturePreview.textContent = "Speech input is not available in this browser. Type the task instead."; return; }
+    const recognition = new Recognition();
+    recognition.lang = "en-AU"; recognition.interimResults = false; recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => { captureText.value = event.results[0][0].transcript; refreshCapturePreview(true); };
+    recognition.onerror = () => { capturePreview.textContent = "Microphone access was not available. Type the task instead."; };
+    recognition.start();
+    capturePreview.textContent = "Listening… speak the task, due date and reminder lead time.";
+  });
+
   document.getElementById("capture-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    const text = document.getElementById("capture-text").value.trim();
-    if (!text) return;
+    const sourceText = captureText.value.trim();
+    if (!sourceText) return;
+    const task = captureTitle(sourceText);
+    const dueDate = captureDue.value;
+    const leadDays = Number(captureReminderDays.value || 0);
+    const reminderDate = dueDate && leadDays ? new Date(`${dueDate}T00:00:00`) : null;
+    if (reminderDate) reminderDate.setDate(reminderDate.getDate() - leadDays);
     try {
-      await sheetWrite("addTask", { task: text, type: "Admin", priority: "Normal", status: "Open", dueDate: "" });
-      setApiStatus("Saved to Google Sheet.", "success");
+      await sheetWrite("addTask", { task, type: "Admin", priority: "Normal", status: "Open", dueDate });
+      if (reminderDate) await sheetWrite("addTask", { task: `Reminder: ${task}`, type: "Reminder", priority: "Normal", status: "Open", dueDate: reminderDate.toISOString().slice(0, 10) });
+      setApiStatus(reminderDate ? "Task and reminder saved to Google Sheet." : "Task saved to Google Sheet.", "success");
     } catch (err) {
-      state.captures.unshift({ id: createId(), text, createdAt: new Date().toISOString() });
-      setApiStatus("Sheet unavailable — saved in this browser only.", "error");
+      state.tasks.push({ id: createId(), title: task, due: dueDate, status: "Open" });
+      if (reminderDate) state.tasks.push({ id: createId(), title: `Reminder: ${task}`, due: reminderDate.toISOString().slice(0, 10), status: "Open" });
+      setApiStatus("Sheet unavailable — task and reminder saved in this browser only.", "error");
     }
     event.target.reset();
+    captureReminderDays.value = "2";
+    refreshCapturePreview(false);
     saveState();
     renderAll();
   });
