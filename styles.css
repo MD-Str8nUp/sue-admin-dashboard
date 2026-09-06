@@ -670,6 +670,11 @@ h2 {
   font-size: .88rem;
 }
 
+.capture-adjustments { border: 1px solid var(--line-soft); border-radius: var(--radius); background: #ffffff; }
+.capture-adjustments summary { padding: 10px 12px; color: var(--navy); font-size: .88rem; font-weight: 800; cursor: pointer; }
+.capture-adjustments[open] summary { border-bottom: 1px solid var(--line-soft); }
+.capture-adjustments .form__row { padding: 12px; }
+
 .capture-list {
   margin-bottom: 6px;
 }
