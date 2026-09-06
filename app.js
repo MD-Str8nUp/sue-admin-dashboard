@@ -214,6 +214,7 @@ function renderItemList({ key, targetId, emptyText, title, meta, actions, items,
     const node = template.content.firstElementChild.cloneNode(true);
     node.classList.add(`item--${key}`);
     node.classList.toggle("is-done", item.status === "Done");
+    node.classList.toggle("is-reminder", key === "tasks" && /^Reminder:/i.test(String(item.title || "")));
     node.querySelector(".item__title").textContent = title(item);
     node.querySelector(".item__meta").textContent = meta(item);
 
@@ -228,7 +229,9 @@ function renderItemList({ key, targetId, emptyText, title, meta, actions, items,
     }
 
     const actionWrap = node.querySelector(".item__actions");
-    actions(item).forEach((action) => {
+    const itemActions = actions(item);
+    const visibleActions = key === "tasks" ? itemActions.slice(0, 1) : itemActions;
+    visibleActions.forEach((action) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = `mini-button${action.danger ? " mini-button--danger" : ""}`;
@@ -236,6 +239,21 @@ function renderItemList({ key, targetId, emptyText, title, meta, actions, items,
       button.addEventListener("click", action.onClick);
       actionWrap.append(button);
     });
+
+    if (key === "tasks" && itemActions.length > 1) {
+      const more = document.createElement("details");
+      more.className = "task-more";
+      more.innerHTML = "<summary>More</summary>";
+      itemActions.slice(1).forEach((action) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `mini-button${action.danger ? " mini-button--danger" : ""}`;
+        button.textContent = action.label;
+        button.addEventListener("click", action.onClick);
+        more.append(button);
+      });
+      actionWrap.append(more);
+    }
 
     list.append(node);
   });
@@ -1017,17 +1035,18 @@ function setupForms() {
   function renderStructuredCapturePreview(plan) {
     const rows = [];
     if (!plan.task) {
-      rows.push("Task: waiting for capture text.");
+      rows.push("Task: waiting for text.");
     } else {
       rows.push(`Task: ${plan.task}`);
     }
-    rows.push(`Due date: ${plan.dueDate ? formatDate(plan.dueDate) : "not set"}`);
-    rows.push(`Deadline/reminder: ${plan.dueDate ? `${plan.leadDays} day${plan.leadDays === 1 ? "" : "s"} before due${plan.reminderDate ? ` (${formatDate(plan.reminderDate)})` : ""}` : "choose a due date first"}`);
-    rows.push("Save path: Google Sheet first; browser-only fallback if the Sheet write fails.");
+    rows.push(plan.dueDate
+      ? `Due: ${formatDate(plan.dueDate)}. Reminder: ${plan.leadDays} day${plan.leadDays === 1 ? "" : "s"} before${plan.reminderDate ? ` (${formatDate(plan.reminderDate)})` : ""}.`
+      : "Due/reminder: not recognised yet.");
+    rows.push("Will create: task plus deadline/reminder record.");
 
     capturePreview.innerHTML = "";
     const heading = document.createElement("strong");
-    heading.textContent = "Structured preview";
+    heading.textContent = "Confirmation";
     capturePreview.append(heading);
     rows.forEach((text) => {
       const row = document.createElement("span");
@@ -1134,13 +1153,13 @@ function setupForms() {
       await sheetWrite("addTask", { task, type: "Admin", priority: "Normal", status: "Open", dueDate });
       await sheetWrite("addDeadline", { title: task, date: dueDate, leadDays, reminderDate });
       setApiStatus("Task and deadline/reminder saved to Google Sheet.", "success");
-      setCaptureStatus("Created in the Google Sheet: work task plus deadline/reminder record.", "success");
+      setCaptureStatus(`Created in the Google Sheet: task plus deadline/reminder record. Due ${formatDate(dueDate)}; reminder ${leadDays} day${leadDays === 1 ? "" : "s"} before${reminderDate ? ` (${formatDate(reminderDate)})` : ""}.`, "success");
     } catch (err) {
       state.tasks.push({ id: createId(), title: task, due: dueDate, status: "Open" });
       state.deadlines.push(deadlineRecord);
       sortDeadlines();
       setApiStatus("Sheet write unavailable — Quick Capture saved in this browser only.", "error");
-      setCaptureStatus("Sheet write failed or is unavailable. Stored locally in this browser: work task plus deadline/reminder record.", "error");
+      setCaptureStatus(`Sheet write failed or is unavailable. Stored locally: task plus deadline/reminder record. Due ${formatDate(dueDate)}; reminder ${leadDays} day${leadDays === 1 ? "" : "s"} before${reminderDate ? ` (${formatDate(reminderDate)})` : ""}.`, "error");
     }
     event.target.reset();
     captureReminderDays.value = "2";
