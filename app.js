@@ -981,7 +981,8 @@ function setupForms() {
     const match = text.match(/\b(?:by\s+)?(?:next\s+\w+,?\s*)?(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(20\d{2})\b/i);
     if (!match) return "";
     const date = new Date(Number(match[3]), months[match[2].toLowerCase()], Number(match[1]));
-    return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+    if (Number.isNaN(date.getTime()) || date.getFullYear() !== Number(match[3]) || date.getMonth() !== months[match[2].toLowerCase()] || date.getDate() !== Number(match[1])) return "";
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
   }
 
   function reminderDaysFromCaptureText(text) {
@@ -1008,7 +1009,8 @@ function setupForms() {
     if (!due) { capturePreview.textContent = `Will add: ${task}. Add a due date if you want a reminder.`; return; }
     const reminder = new Date(`${due}T00:00:00`);
     reminder.setDate(reminder.getDate() - lead);
-    capturePreview.textContent = lead ? `Will add “${task}” due ${formatDate(due)}, plus a reminder on ${formatDate(reminder.toISOString().slice(0, 10))}.` : `Will add “${task}” due ${formatDate(due)}.`;
+    const reminderKey = `${reminder.getFullYear()}-${String(reminder.getMonth() + 1).padStart(2, "0")}-${String(reminder.getDate()).padStart(2, "0")}`;
+    capturePreview.textContent = lead ? `Will add “${task}” due ${formatDate(due)}, plus a reminder on ${formatDate(reminderKey)}.` : `Will add “${task}” due ${formatDate(due)}.`;
   }
 
   captureText.addEventListener("input", () => refreshCapturePreview(true));
@@ -1035,13 +1037,14 @@ function setupForms() {
     const leadDays = Number(captureReminderDays.value || 0);
     const reminderDate = dueDate && leadDays ? new Date(`${dueDate}T00:00:00`) : null;
     if (reminderDate) reminderDate.setDate(reminderDate.getDate() - leadDays);
+    const reminderDateKey = reminderDate ? `${reminderDate.getFullYear()}-${String(reminderDate.getMonth() + 1).padStart(2, "0")}-${String(reminderDate.getDate()).padStart(2, "0")}` : "";
     try {
       await sheetWrite("addTask", { task, type: "Admin", priority: "Normal", status: "Open", dueDate });
-      if (reminderDate) await sheetWrite("addTask", { task: `Reminder: ${task}`, type: "Reminder", priority: "Normal", status: "Open", dueDate: reminderDate.toISOString().slice(0, 10) });
+      if (reminderDate) await sheetWrite("addTask", { task: `Reminder: ${task}`, type: "Reminder", priority: "Normal", status: "Open", dueDate: reminderDateKey });
       setApiStatus(reminderDate ? "Task and reminder saved to Google Sheet." : "Task saved to Google Sheet.", "success");
     } catch (err) {
       state.tasks.push({ id: createId(), title: task, due: dueDate, status: "Open" });
-      if (reminderDate) state.tasks.push({ id: createId(), title: `Reminder: ${task}`, due: reminderDate.toISOString().slice(0, 10), status: "Open" });
+      if (reminderDate) state.tasks.push({ id: createId(), title: `Reminder: ${task}`, due: reminderDateKey, status: "Open" });
       setApiStatus("Sheet unavailable — task and reminder saved in this browser only.", "error");
     }
     event.target.reset();
