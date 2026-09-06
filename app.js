@@ -125,7 +125,7 @@ function mergeState(saved) {
     return structuredClone(initialState);
   }
 
-  return {
+  const merged = {
     ...structuredClone(initialState),
     ...saved,
     xenaInfo: {
@@ -133,6 +133,9 @@ function mergeState(saved) {
       ...(saved && saved.xenaInfo ? saved.xenaInfo : {})
     }
   };
+  merged.completionHistory = normaliseCompletionHistory(merged.completionHistory);
+  merged.tasks = normaliseStoredTasks(merged.tasks, merged.completionHistory);
+  return merged;
 }
 
 function saveState() {
@@ -144,9 +147,9 @@ function stateForStorage(nextState) {
   return {
     captures: Array.isArray(merged.captures) ? merged.captures : [],
     busyBlocks: Array.isArray(merged.busyBlocks) ? merged.busyBlocks : [],
-    tasks: Array.isArray(merged.tasks) ? merged.tasks : [],
+    tasks: normaliseStoredTasks(merged.tasks, merged.completionHistory),
     deadlines: Array.isArray(merged.deadlines) ? merged.deadlines : [],
-    completionHistory: Array.isArray(merged.completionHistory) ? merged.completionHistory : [],
+    completionHistory: normaliseCompletionHistory(merged.completionHistory),
     xenaInfo: {
       ...initialState.xenaInfo,
       ...(merged.xenaInfo && typeof merged.xenaInfo === "object" ? merged.xenaInfo : {})
@@ -186,6 +189,82 @@ function formatDateTime(value) {
   }).format(new Date(value));
 }
 
+function normaliseDateTime(value) {
+  if (!value) return "";
+  const text = String(value).trim();
+  if (!text) return "";
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(text) ? new Date(`${text}T00:00:00`) : new Date(text);
+  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
+}
+
+function completionHistoryKey(entry) {
+  const sourceRow = Number(entry && (entry.sourceRow || entry.rowNumber || 0));
+  const status = normaliseTaskStatus(entry && entry.status);
+  if (sourceRow) return `sheet:${sourceRow}:${status}`;
+  return `local:${String(entry && (entry.taskKey || entry.id || entry.title || "")).trim()}:${status}`;
+}
+
+function normaliseCompletionHistory(entries) {
+  if (!Array.isArray(entries)) return [];
+  const byKey = new Map();
+
+  entries.forEach((entry) => {
+    if (!entry || typeof entry !== "object") return;
+    const title = String(entry.title || entry.task || entry.taskTitle || "Completed task").trim();
+    const completedAt = String(entry.completedAt || entry.completedTimestamp || entry.timestamp || "").trim();
+    if (!title || !completedAt || Number.isNaN(new Date(completedAt).getTime())) return;
+    const status = normaliseTaskStatus(entry.status || "Done");
+    const clean = {
+      id: String(entry.id || completionHistoryKey(entry) || createId()),
+      taskKey: String(entry.taskKey || entry.id || entry.title || title),
+      title,
+      sourceRow: Number(entry.sourceRow || entry.rowNumber || 0) || null,
+      status,
+      completedAt: new Date(completedAt).toISOString()
+    };
+    const key = completionHistoryKey(clean);
+    const existing = byKey.get(key);
+    if (!existing || new Date(clean.completedAt) < new Date(existing.completedAt)) {
+      byKey.set(key, clean);
+    }
+  });
+
+  return Array.from(byKey.values())
+    .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+}
+
+function mergeCompletionHistory(existing, incoming) {
+  return normaliseCompletionHistory([...(existing || []), ...(incoming || [])]);
+}
+
+function isSheetTask(item) {
+  return /^sheet-task-\d+$/.test(String(item && item.id ? item.id : ""));
+}
+
+function taskKey(item) {
+  return String((item && item.id) || (item && item.title) || "");
+}
+
+function normaliseStoredTasks(tasks, legacyHistory = []) {
+  if (!Array.isArray(tasks)) return [];
+  const historyByKey = new Map();
+
+  normaliseCompletionHistory(legacyHistory).forEach((entry) => {
+    if (entry.taskKey && entry.completedAt) historyByKey.set(String(entry.taskKey), entry.completedAt);
+  });
+
+  return tasks.map((item) => {
+    const task = item && typeof item === "object" ? { ...item } : {};
+    task.id = String(task.id || createId());
+    task.title = String(task.title || task.task || "").trim();
+    task.due = String(task.due || task.dueDate || "");
+    task.status = normaliseTaskStatus(task.status);
+    const completedAt = normaliseDateTime(task.completedAt) || historyByKey.get(taskKey(task)) || "";
+    task.completedAt = task.status === "Done" ? completedAt : "";
+    return task;
+  });
+}
+
 function normaliseTaskStatus(status) {
   return TASK_STATUSES.includes(status) ? status : "Open";
 }
@@ -196,6 +275,23 @@ function taskStatusPill(item) {
     label,
     variant: label.toLowerCase()
   };
+}
+
+function isReminderTask(item) {
+  return /^Reminder:/i.test(String(item.title || ""));
+}
+
+function displayTaskTitle(item) {
+  return String(item.title || "").replace(/^Reminder:\s*/i, "").trim() || item.title;
+}
+
+function taskMetaText(item) {
+  const dateText = item.due ? formatDate(item.due) : "No date set";
+  return isReminderTask(item) ? `Reminder due ${dateText}` : `Due ${dateText}`;
+}
+
+function taskCompletionText(item) {
+  return item.completedAt ? `Completed ${formatDateTime(item.completedAt)}` : "Completed: Not recorded";
 }
 
 function renderItemList({ key, targetId, emptyText, title, meta, actions, items, pill }) {
@@ -214,10 +310,27 @@ function renderItemList({ key, targetId, emptyText, title, meta, actions, items,
 
   sourceItems.forEach((item) => {
     const node = template.content.firstElementChild.cloneNode(true);
+    const itemActions = actions(item);
+    const isTask = key === "tasks";
+    const isReminder = isTask && isReminderTask(item);
     node.classList.add(`item--${key}`);
     node.classList.toggle("is-done", item.status === "Done");
-    node.classList.toggle("is-reminder", key === "tasks" && /^Reminder:/i.test(String(item.title || "")));
-    node.querySelector(".item__title").textContent = title(item);
+    node.classList.toggle("is-reminder", isReminder);
+
+    if (isTask) {
+      const toggleAction = itemActions[0];
+      const check = document.createElement("button");
+      check.type = "button";
+      check.className = "task-check";
+      check.setAttribute("aria-pressed", item.status === "Done" ? "true" : "false");
+      check.setAttribute("aria-label", `${item.status === "Done" ? "Reopen" : "Mark done"}: ${displayTaskTitle(item)}`);
+      check.addEventListener("click", toggleAction.onClick);
+      node.prepend(check);
+      node.querySelector(".item__title").textContent = displayTaskTitle(item);
+    } else {
+      node.querySelector(".item__title").textContent = title(item);
+    }
+
     node.querySelector(".item__meta").textContent = meta(item);
 
     if (pill) {
@@ -231,12 +344,12 @@ function renderItemList({ key, targetId, emptyText, title, meta, actions, items,
     }
 
     const actionWrap = node.querySelector(".item__actions");
-    const itemActions = actions(item);
     const visibleActions = key === "tasks" ? itemActions.slice(0, 1) : itemActions;
     visibleActions.forEach((action) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = `mini-button${action.danger ? " mini-button--danger" : ""}`;
+      if (isTask) button.classList.add("task-primary-action");
       button.textContent = action.label;
       button.addEventListener("click", action.onClick);
       actionWrap.append(button);
@@ -245,7 +358,11 @@ function renderItemList({ key, targetId, emptyText, title, meta, actions, items,
     if (key === "tasks" && itemActions.length > 1) {
       const more = document.createElement("details");
       more.className = "task-more";
-      more.innerHTML = "<summary>More</summary>";
+      const summary = document.createElement("summary");
+      summary.className = "task-more__summary";
+      summary.setAttribute("aria-label", `More actions for ${displayTaskTitle(item)}`);
+      summary.textContent = "More";
+      more.append(summary);
       itemActions.slice(1).forEach((action) => {
         const button = document.createElement("button");
         button.type = "button";
@@ -347,7 +464,7 @@ async function createBusyBlockFollowUp(item, info) {
     await sheetWrite("addTask", { task, type: "Admin", priority: "Normal", status: "Open", dueDate: today() });
     setApiStatus("Follow-up added to Google Sheet.", "success");
   } catch (err) {
-    state.tasks.push({ id: createId(), title: task, due: today(), status: "Open" });
+    state.tasks.push(localTaskRecord(task, today(), "Open"));
     saveState();
     renderAll();
     setApiStatus("Sheet unavailable — follow-up added in this browser only.", "error");
@@ -360,20 +477,17 @@ function taskActions(item) {
       label: item.status === "Done" ? "Reopen" : "Done",
       onClick: async () => {
         const nextStatus = item.status === "Done" ? "Open" : "Done";
-        const match = /^sheet-task-(\d+)$/.exec(String(item.id || ""));
+        const match = isSheetTask(item) ? /^sheet-task-(\d+)$/.exec(String(item.id || "")) : null;
         if (match) {
           try {
             await sheetWrite("updateTaskStatus", { rowNumber: Number(match[1]), status: nextStatus });
-            recordTaskCompletion(item, nextStatus);
-            renderAll();
             setApiStatus("Saved to Google Sheet.", "success");
             return;
           } catch (err) {
             setApiStatus("Sheet unavailable — updated in this browser only.", "error");
           }
         }
-        item.status = nextStatus;
-        recordTaskCompletion(item, nextStatus);
+        applyLocalTaskStatus(item, nextStatus);
         saveState();
         renderAll();
       }
@@ -389,7 +503,7 @@ function taskActions(item) {
         if (status === null) return;
         item.title = title;
         item.due = due;
-        item.status = status;
+        applyLocalTaskStatus(item, status);
         saveState();
         renderAll();
       }
@@ -398,15 +512,27 @@ function taskActions(item) {
   ];
 }
 
-function recordTaskCompletion(item, status) {
-  const key = String(item.id || item.title || "");
-  if (status === "Done") {
-    state.completionHistory.unshift({ id: createId(), taskKey: key, title: item.title || "Completed task", completedAt: new Date().toISOString() });
+function applyLocalTaskStatus(item, status) {
+  item.status = normaliseTaskStatus(status);
+  if (item.status === "Done") {
+    item.completedAt = normaliseDateTime(item.completedAt) || new Date().toISOString();
+  } else if (!isSheetTask(item)) {
+    item.completedAt = "";
   } else {
-    const index = state.completionHistory.findIndex((entry) => entry.taskKey === key);
-    if (index >= 0) state.completionHistory.splice(index, 1);
+    item.completedAt = "";
   }
-  saveState();
+}
+
+function localTaskRecord(title, due = "", status = "Open") {
+  const task = {
+    id: createId(),
+    title,
+    due,
+    status: "Open",
+    completedAt: ""
+  };
+  applyLocalTaskStatus(task, status);
+  return task;
 }
 
 function renderSummary() {
@@ -425,6 +551,49 @@ function renderSummary() {
   document.getElementById("summary-open-tasks").textContent = String(openTasks);
   document.getElementById("summary-overdue").textContent = String(overdue);
   document.getElementById("summary-upcoming").textContent = String(upcoming);
+}
+
+function weekStartDate() {
+  const monday = new Date();
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  return monday;
+}
+
+function reminderDueCount() {
+  const todayStr = today();
+  const dueReminderTasks = state.tasks.filter((item) => (
+    item.status !== "Done" &&
+    isReminderTask(item) &&
+    item.due &&
+    item.due <= todayStr
+  )).length;
+
+  const dueDeadlineReminders = state.deadlines.filter((item) => {
+    if (!item || !item.date || item.date < todayStr) return false;
+    const reminderDate = reminderDateFor(item.date, Number.parseInt(item.leadDays, 10) || 0);
+    return reminderDate && reminderDate <= todayStr;
+  }).length;
+
+  return dueReminderTasks + dueDeadlineReminders;
+}
+
+function completedTasksForProgress() {
+  const tasks = state.tasks
+    .filter((item) => normaliseTaskStatus(item.status) === "Done")
+    .map((item) => ({
+      id: taskKey(item),
+      title: displayTaskTitle(item) || "Completed task",
+      completedAt: normaliseDateTime(item.completedAt),
+      source: isSheetTask(item) ? "sheet" : "local"
+    }));
+
+  return tasks.sort((a, b) => {
+    if (a.completedAt && b.completedAt) return new Date(b.completedAt) - new Date(a.completedAt);
+    if (a.completedAt) return -1;
+    if (b.completedAt) return 1;
+    return a.title.localeCompare(b.title);
+  });
 }
 
 function setImportStatus(message, type = "info") {
@@ -456,7 +625,7 @@ function renderAll() {
     emptyText: "No extra tasks for today.",
     items: todayTasks,
     title: (item) => item.title,
-    meta: (item) => (item.due ? formatDate(item.due) : "No date set"),
+    meta: taskMetaText,
     pill: taskStatusPill,
     actions: taskActions
   });
@@ -467,7 +636,7 @@ function renderAll() {
     emptyText: "No weekly tasks yet.",
     items: weekTasks,
     title: (item) => item.title,
-    meta: (item) => (item.due ? formatDate(item.due) : "No date set"),
+    meta: taskMetaText,
     pill: taskStatusPill,
     actions: taskActions
   });
@@ -507,21 +676,21 @@ function renderAll() {
 function renderProgress() {
   const history = document.getElementById("progress-history");
   if (!history) return;
-  const monday = new Date();
-  monday.setHours(0, 0, 0, 0);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  const completedThisWeek = state.completionHistory.filter((entry) => new Date(entry.completedAt) >= monday).length;
+  const monday = weekStartDate();
+  const completedTasks = completedTasksForProgress();
+  const completedThisWeek = completedTasks.filter((entry) => entry.completedAt && new Date(entry.completedAt) >= monday).length;
   document.getElementById("progress-completed").textContent = String(completedThisWeek);
   document.getElementById("progress-open").textContent = String(state.tasks.filter((item) => item.status !== "Done").length);
-  document.getElementById("progress-reminders").textContent = String(state.deadlines.filter((item) => item.date && item.date >= today()).length);
+  document.getElementById("progress-reminders").textContent = String(reminderDueCount());
   history.innerHTML = "";
-  if (!state.completionHistory.length) {
+  if (!completedTasks.length) {
     const empty = document.createElement("li"); empty.className = "empty"; empty.textContent = "Completed tasks will appear here with the date they were marked done."; history.append(empty); return;
   }
-  state.completionHistory.slice(0, 30).forEach((entry) => {
+  completedTasks.slice(0, 30).forEach((entry) => {
     const row = document.createElement("li"); row.className = "progress-history__item";
     const title = document.createElement("strong"); title.textContent = entry.title;
-    const date = document.createElement("span"); date.textContent = `Completed ${formatDateTime(entry.completedAt)}`;
+    const date = document.createElement("span");
+    date.textContent = entry.completedAt ? `Completed ${formatDateTime(entry.completedAt)}` : "Completed: Not recorded";
     row.append(title, date); history.append(row);
   });
 }
@@ -1194,7 +1363,7 @@ function setupForms() {
       setApiStatus("Task and deadline/reminder saved to Google Sheet.", "success");
       setCaptureStatus(`Created in the Google Sheet: task plus deadline/reminder record. Due ${formatDate(dueDate)}; reminder ${leadDays} day${leadDays === 1 ? "" : "s"} before${reminderDate ? ` (${formatDate(reminderDate)})` : ""}.`, "success");
     } catch (err) {
-      state.tasks.push({ id: createId(), title: task, due: dueDate, status: "Open" });
+      state.tasks.push(localTaskRecord(task, dueDate, "Open"));
       state.deadlines.push(deadlineRecord);
       sortDeadlines();
       setApiStatus("Sheet write unavailable — Quick Capture saved in this browser only.", "error");
@@ -1234,7 +1403,7 @@ function setupForms() {
       await sheetWrite("addTask", { task, type: "Admin", priority: "Normal", status, dueDate: due });
       setApiStatus("Saved to Google Sheet.", "success");
     } catch (err) {
-      state.tasks.push({ id: createId(), title: task, due, status });
+      state.tasks.push(localTaskRecord(task, due, status));
       setApiStatus("Sheet unavailable — saved in this browser only.", "error");
     }
     event.target.reset();
@@ -1567,12 +1736,31 @@ function mapSheetTasks(rows) {
   if (!Array.isArray(rows)) return [];
   return rows
     .filter((r) => r && r.task)
-    .map((r) => ({
-      id: `sheet-task-${r.rowNumber}`,
-      title: String(r.task || "").trim(),
-      due: r.dueDate || "",
-      status: normaliseSheetStatus(r.status)
-    }));
+    .map((r) => {
+      const status = normaliseSheetStatus(r.status);
+      const completedAt = status === "Done"
+        ? normaliseDateTime(pickField(r, [
+          "completedAt",
+          "completedDate",
+          "completedOn",
+          "completionDate",
+          "completionTimestamp",
+          "dateCompleted",
+          "Completed At",
+          "Completed Date",
+          "Completed On",
+          "Completion Date",
+          "Date Completed"
+        ]))
+        : "";
+      return {
+        id: `sheet-task-${r.rowNumber}`,
+        title: String(r.task || "").trim(),
+        due: r.dueDate || "",
+        status,
+        completedAt
+      };
+    });
 }
 
 function pickField(item, keys) {
@@ -1596,6 +1784,28 @@ function mapSheetDeadlines(rows) {
         title: title || "(untitled deadline)",
         date: date || "",
         leadDays: Number.isFinite(leadDays) ? Math.max(0, leadDays) : 7
+      };
+    })
+    .filter(Boolean);
+}
+
+function mapSheetCompletionHistory(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .map((r) => {
+      if (!r || typeof r !== "object") return null;
+      const sourceRow = Number(r.sourceRow || r.rowNumber || 0);
+      const title = String(r.title || r.task || r.taskTitle || "").trim();
+      const completedAt = String(r.completedAt || r.completedTimestamp || "").trim();
+      const status = normaliseTaskStatus(r.status || "Done");
+      if (!sourceRow || !title || !completedAt || Number.isNaN(new Date(completedAt).getTime())) return null;
+      return {
+        id: `sheet-history-${sourceRow}-${status}`,
+        taskKey: `sheet-task-${sourceRow}`,
+        title,
+        sourceRow,
+        status,
+        completedAt
       };
     })
     .filter(Boolean);
@@ -1625,8 +1835,10 @@ function applyDashboardData(data) {
   if (!data) return;
   const tasks = mapSheetTasks(data.tasks);
   const deadlines = mapSheetDeadlines(data.deadlines);
+  const completionHistory = mapSheetCompletionHistory(data.completionHistory || data.taskHistory);
   state.tasks = tasks;
   state.deadlines = deadlines;
+  state.completionHistory = mergeCompletionHistory(state.completionHistory, completionHistory);
   saveState();
   renderAll();
 }
