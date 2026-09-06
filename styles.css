@@ -48,6 +48,43 @@ textarea {
   font: inherit;
 }
 
+.view-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 18px 0 14px;
+  padding: 5px;
+  background: #e7eff8;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.view-tab {
+  min-height: 46px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--navy-soft);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.view-tab.is-active,
+.view-tab[aria-selected="true"] {
+  background: var(--navy);
+  color: #fff;
+  box-shadow: 0 2px 7px rgba(18, 38, 63, 0.2);
+}
+
+.view-tab:focus-visible {
+  outline: 3px solid #407ab4;
+  outline-offset: 2px;
+}
+
+.tab-panel[hidden] {
+  display: none !important;
+}
+
 button {
   cursor: pointer;
 }
@@ -226,6 +263,53 @@ h2 {
   padding: 20px 0 42px;
   display: grid;
   gap: 16px;
+}
+
+/* -------- Work / Health tab strip -------- */
+
+.view-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  background: #e8eef5;
+  border: 1px solid #d3dce8;
+  border-radius: 10px;
+}
+
+.view-tab {
+  position: relative;
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #334155;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.view-tab[aria-selected="true"],
+.view-tab.is-active {
+  background: #ffffff;
+  color: var(--navy);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.14);
+}
+
+.view-tab:focus-visible {
+  outline: 3px solid #0b5fff;
+  outline-offset: 2px;
+}
+
+.tab-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.tab-panel[hidden] {
+  display: none;
 }
 
 /* -------- Notice panel -------- */

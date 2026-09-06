@@ -999,9 +999,41 @@ function setupPersonalHealth() {
   healthRender();
 }
 
+function setupDashboardTabs() {
+  const tabs = [
+    { tab: document.getElementById("work-tab"), panel: document.getElementById("work-panel") },
+    { tab: document.getElementById("health-tab"), panel: document.getElementById("health-panel") }
+  ];
+
+  function selectTab(selected) {
+    tabs.forEach(({ tab, panel }) => {
+      const active = tab === selected.tab;
+      tab.setAttribute("aria-selected", String(active));
+      tab.tabIndex = active ? 0 : -1;
+      tab.classList.toggle("is-active", active);
+      panel.hidden = !active;
+    });
+  }
+
+  tabs.forEach((item) => {
+    item.tab.addEventListener("click", () => selectTab(item));
+    item.tab.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      const index = tabs.indexOf(item);
+      const next = tabs[(index + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      next.tab.focus();
+      selectTab(next);
+    });
+  });
+
+  selectTab(tabs[0]);
+}
+
 setupClinicalNoteFormatter();
 setupForms();
 setupPersonalHealth();
+setupDashboardTabs();
 renderAll();
 hydrateFromSheetApi();
 
