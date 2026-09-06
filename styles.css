@@ -276,15 +276,19 @@ h2 {
 }
 
 .progress-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0 18px; }
-.progress-stats div { padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--pale); }
-.progress-stats span { display: block; color: var(--muted); font-size: .72rem; font-weight: 800; text-transform: uppercase; }
+.progress-stats div { min-width: 0; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--pale); }
+.progress-stats span { display: block; color: var(--muted); font-size: .72rem; font-weight: 800; line-height: 1.2; text-transform: uppercase; }
 .progress-stats strong { display: block; margin-top: 2px; color: var(--navy); font-size: 1.55rem; }
 .progress-subtitle { margin: 0; color: var(--navy); font-size: .95rem; }
 .progress-history__item { display: grid; gap: 2px; padding: 10px; border-left: 3px solid var(--success); background: #f4faf6; border-radius: 0 var(--radius) var(--radius) 0; }
 .progress-history__item span { color: var(--muted); font-size: .82rem; }
 
 @media (max-width: 560px) {
-  .progress-stats { grid-template-columns: 1fr; }
+  .progress-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin: 10px 0 12px; }
+  .progress-stats div { padding: 8px 6px; }
+  .progress-stats span { font-size: .62rem; overflow-wrap: anywhere; }
+  .progress-stats strong { font-size: 1.35rem; }
+  .progress-history__item { padding: 9px; }
 }
 
 /* -------- Compact Work overview / collapsible tools -------- */
@@ -1111,82 +1115,158 @@ textarea:focus {
   display: flex;
 }
 
-#task-list .item,
-#today-task-list .item,
 #capture-list .item {
   gap: 12px;
 }
 
-/* Compact, action-led task rows */
+/* Compact mobile task cards */
 #task-list .item,
 #today-task-list .item {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
+  grid-template-areas:
+    "check content done"
+    ".     more    .";
+  align-items: start;
+  column-gap: 8px;
+  row-gap: 2px;
+  padding: 8px 10px;
   border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
+  border-radius: 8px;
   background: #ffffff;
 }
 
 #task-list .item.is-reminder,
 #today-task-list .item.is-reminder {
-  border-left: 4px solid #c38b2f;
-  background: #fffaf1;
+  border-left: 3px solid #d1a15b;
+  background: #fffdf8;
+}
+
+#task-list .task-check,
+#today-task-list .task-check {
+  grid-area: check;
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 2px solid #5da66b;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+#task-list .task-check[aria-pressed="true"],
+#today-task-list .task-check[aria-pressed="true"] {
+  background: #5da66b;
+  color: #ffffff;
+}
+
+#task-list .task-check[aria-pressed="true"]::after,
+#today-task-list .task-check[aria-pressed="true"]::after {
+  content: "✓";
+  font-weight: 900;
+  line-height: 1;
 }
 
 #task-list .item__content,
 #today-task-list .item__content {
+  grid-area: content;
   display: flex;
-  align-items: center;
-  gap: 7px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   min-width: 0;
 }
 
 #task-list .item__title,
-#today-task-list .item__title { flex: 1 1 auto; font-size: .95rem; }
+#today-task-list .item__title {
+  min-width: 0;
+  color: var(--navy);
+  font-size: .95rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+#task-list .item__meta,
+#today-task-list .item__meta {
+  display: block;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+#task-list .item.is-reminder .item__meta,
+#today-task-list .item.is-reminder .item__meta {
+  color: #8a6427;
+}
 
 #task-list .status-pill,
-#today-task-list .status-pill { margin-left: auto; flex: 0 0 auto; }
+#today-task-list .status-pill {
+  margin: 0;
+  align-self: flex-start;
+}
 
 .dashboard-card #task-list .item__actions,
-.dashboard-card #today-task-list .item__actions { display: flex; align-items: center; gap: 6px; }
+.dashboard-card #today-task-list .item__actions {
+  display: contents;
+}
 
-.task-more { position: relative; }
-.task-more summary { color: var(--muted); font-size: .75rem; font-weight: 800; cursor: pointer; }
-.task-more[open] { display: flex; align-items: center; gap: 5px; }
+#task-list .task-primary-action,
+#today-task-list .task-primary-action {
+  grid-area: done;
+  align-self: start;
+  min-width: 72px;
+  min-height: 44px;
+  padding: 7px 12px;
+  white-space: nowrap;
+}
 
-@media (max-width: 560px) {
-  #task-list .item,
-  #today-task-list .item { grid-template-columns: 30px minmax(0, 1fr); }
-  .dashboard-card #task-list .item__actions,
-  .dashboard-card #today-task-list .item__actions { grid-column: 2; }
+#task-list .task-more,
+#today-task-list .task-more {
+  grid-area: more;
+  min-width: 0;
+}
+
+#task-list .task-more__summary,
+#today-task-list .task-more__summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: .8rem;
+  font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+}
+
+#task-list .task-more__summary::-webkit-details-marker,
+#today-task-list .task-more__summary::-webkit-details-marker {
+  display: none;
+}
+
+#task-list .task-more[open],
+#today-task-list .task-more[open] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+#task-list .task-more .mini-button,
+#today-task-list .task-more .mini-button {
+  min-height: 44px;
 }
 
 #task-list .item::before,
-#today-task-list .item::before {
-  content: "";
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  margin-top: 2px;
-  border-radius: 6px;
-  border: 2px solid #5da66b;
-  background: #ffffff;
-}
-
+#today-task-list .item::before,
 #task-list .item.is-done::before,
 #today-task-list .item.is-done::before {
-  content: "✓";
-  border-color: #5da66b;
-  background: #5da66b;
-  color: #ffffff;
-  font-weight: 900;
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+  display: none;
 }
 
 #capture-list .item::before {
@@ -1216,8 +1296,6 @@ textarea:focus {
 }
 
 #busy-list .item__meta,
-#task-list .item__meta,
-#today-task-list .item__meta,
 #capture-list .item__meta {
   display: none;
 }
