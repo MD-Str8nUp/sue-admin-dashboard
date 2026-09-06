@@ -45,6 +45,15 @@
       </div>
 
       <section id="work-panel" class="tab-panel" role="tabpanel" aria-labelledby="work-tab">
+      <section class="calendar-placeholder" aria-labelledby="calendar-placeholder-title">
+        <div>
+          <span class="calendar-placeholder__eyebrow">Calendar</span>
+          <h2 id="calendar-placeholder-title" class="calendar-placeholder__title">Today</h2>
+          <p class="calendar-placeholder__date" id="calendar-placeholder-date">Loading today…</p>
+        </div>
+        <p class="calendar-placeholder__message">Calendar connection coming later.</p>
+      </section>
+
       <section class="panel backend-snapshot" aria-labelledby="backend-snapshot-title">
         <div class="panel__header panel__header--split">
           <div>
@@ -61,10 +70,14 @@
         </div>
       </section>
 
-      <section class="panel clinical-note" aria-labelledby="clinical-note-title">
+      <details class="panel collapsible-panel clinical-note" aria-labelledby="clinical-note-title">
+        <summary class="collapsible-panel__summary">
+          <span><strong id="clinical-note-title">Clinic note formatter</strong><small>Prepare and copy a session note</small></span>
+          <span class="collapsible-panel__state">Open</span>
+        </summary>
+        <div class="collapsible-panel__body">
         <div class="panel__header panel__header--split">
           <div>
-            <h2 id="clinical-note-title" class="section-title">Clinical note formatter</h2>
             <p class="section-hint">Prepare a temporary, generic note draft before manually entering it into the practice system.</p>
           </div>
           <span class="save-state">DOM-only</span>
@@ -134,12 +147,17 @@
           </div>
           <p class="import-status import-status--info" id="clinical-note-status" role="status" aria-live="polite"></p>
         </form>
-      </section>
+        </div>
+      </details>
 
-      <section class="panel email-draft" aria-labelledby="email-draft-title">
+      <details class="panel collapsible-panel email-draft" aria-labelledby="email-draft-title">
+        <summary class="collapsible-panel__summary">
+          <span><strong id="email-draft-title">After-session draft email</strong><small>Select materials and open a review draft</small></span>
+          <span class="collapsible-panel__state">Open</span>
+        </summary>
+        <div class="collapsible-panel__body">
         <div class="panel__header panel__header--split">
           <div>
-            <h2 id="email-draft-title" class="section-title">Post-session email draft</h2>
             <p class="section-hint">Create an editable browser-only test draft. It is not saved, sent or written to the Sheet.</p>
           </div>
           <span class="save-state">DOM-only</span>
@@ -191,7 +209,8 @@
           </div>
           <p class="import-status import-status--info" id="email-draft-status" role="status" aria-live="polite"></p>
         </form>
-      </section>
+        </div>
+      </details>
 
       <div class="dashboard-grid" aria-label="Dashboard workspace">
         <section class="panel dashboard-card" aria-labelledby="today-title">

@@ -377,11 +377,14 @@ function setImportStatus(message, type = "info") {
 }
 
 function renderAll() {
-  document.getElementById("today-label").textContent = new Intl.DateTimeFormat("en-AU", {
+  const readableToday = new Intl.DateTimeFormat("en-AU", {
     weekday: "long",
     day: "numeric",
     month: "long"
   }).format(new Date());
+  document.getElementById("today-label").textContent = readableToday;
+  const calendarDate = document.getElementById("calendar-placeholder-date");
+  if (calendarDate) calendarDate.textContent = readableToday;
 
   renderSummary();
 

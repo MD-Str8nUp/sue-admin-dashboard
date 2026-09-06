@@ -275,6 +275,40 @@ h2 {
   display: none !important;
 }
 
+/* -------- Compact Work overview / collapsible tools -------- */
+.calendar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(100deg, #f5f9fd, #ffffff);
+}
+.calendar-placeholder__eyebrow { display: block; color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.calendar-placeholder__title { margin: 2px 0 0; color: var(--navy); font-size: 1rem; }
+.calendar-placeholder__date { margin: 2px 0 0; color: var(--muted); font-size: .86rem; }
+.calendar-placeholder__message { margin: 0; color: var(--muted); font-size: .86rem; text-align: right; }
+
+.collapsible-panel { padding: 0; overflow: hidden; }
+.collapsible-panel__summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; cursor: pointer; list-style: none; }
+.collapsible-panel__summary::-webkit-details-marker { display: none; }
+.collapsible-panel__summary strong { display: block; color: var(--navy); font-size: 1rem; }
+.collapsible-panel__summary small { display: block; margin-top: 2px; color: var(--muted); font-size: .82rem; }
+.collapsible-panel__state { color: var(--navy); font-size: .82rem; font-weight: 800; }
+.collapsible-panel__state::before { content: "⌄ "; }
+.collapsible-panel[open] .collapsible-panel__state::before { content: "⌃ "; }
+.collapsible-panel__body { border-top: 1px solid var(--line-soft); padding: 16px; }
+.collapsible-panel__body .panel__header { padding: 0 0 12px; }
+
+@media (max-width: 560px) {
+  .calendar-placeholder { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .calendar-placeholder__message { text-align: left; }
+  .collapsible-panel__summary { padding: 14px; }
+  .collapsible-panel__body { padding: 14px; }
+}
+
 .materials-box {
   display: grid;
   gap: 8px;
