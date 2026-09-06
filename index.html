@@ -45,6 +45,43 @@
       </div>
 
       <section id="work-panel" class="tab-panel" role="tabpanel" aria-labelledby="work-tab">
+      <section class="panel quick-capture-panel" aria-labelledby="capture-title">
+        <div class="panel__header panel__header--split">
+          <div>
+            <h2 id="capture-title" class="section-title">Quick Capture</h2>
+            <p class="section-hint">Speak or type one work task. Check the due date and reminder before saving.</p>
+          </div>
+          <span class="save-state" id="capture-save-state">Typed fallback ready</span>
+        </div>
+        <form class="form form--capture" id="capture-form">
+          <label class="field field--grow">
+            <span class="field__label">Task, due date and reminder</span>
+            <textarea id="capture-text" rows="4" required placeholder="By next Tuesday, 13 September 2026, renew my practising certificate; remind me two days beforehand."></textarea>
+          </label>
+          <div class="capture-tools">
+            <button class="button button--ghost capture-speak-button" id="capture-speak" type="button">Speak</button>
+            <p class="capture-status" id="capture-speech-status" role="status" aria-live="polite">Checking microphone support...</p>
+          </div>
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">Due date</span>
+              <input id="capture-due" type="date" required>
+            </label>
+            <label class="field">
+              <span class="field__label">Reminder lead time in days</span>
+              <input id="capture-reminder-days" type="number" min="0" max="365" value="2" inputmode="numeric" required>
+            </label>
+          </div>
+          <div class="capture-preview" id="capture-preview" aria-live="polite">
+            <strong>Structured preview</strong>
+            <span>Add a task, then confirm its due date and reminder lead time.</span>
+          </div>
+          <button class="button" type="submit">Create work task</button>
+          <p class="import-status import-status--info" id="capture-submit-status" role="status" aria-live="polite"></p>
+        </form>
+          <p class="section-hint capture-result-note">Saved tasks and reminders appear in Today and This week.</p>
+      </section>
+
       <section class="calendar-placeholder" aria-labelledby="calendar-placeholder-title">
         <div>
           <span class="calendar-placeholder__eyebrow">Calendar</span>
@@ -155,41 +192,6 @@
           </details>
         </section>
 
-        <section class="panel dashboard-card" aria-labelledby="capture-title">
-          <div class="panel__header">
-            <h2 id="capture-title" class="section-title">Quick capture a task or reminder</h2>
-            <p class="section-hint">Speak or type it once. Review the date and reminder before saving.</p>
-          </div>
-          <form class="form form--capture" id="capture-form">
-            <label class="field field--grow">
-              <span class="field__label">What do you need to do?</span>
-              <textarea id="capture-text" rows="3" placeholder="Example: Renew my practising certificate by 13 September 2026. Remind me 2 days beforehand."></textarea>
-            </label>
-            <div class="actions">
-              <button class="button button--ghost" id="capture-speak" type="button">Speak task</button>
-            </div>
-            <div class="form__row">
-              <label class="field">
-                <span class="field__label">Due date</span>
-                <input id="capture-due" type="date">
-              </label>
-              <label class="field">
-                <span class="field__label">Reminder before due</span>
-                <select id="capture-reminder-days">
-                  <option value="0">No separate reminder</option>
-                  <option value="1">1 day before</option>
-                  <option value="2" selected>2 days before</option>
-                  <option value="3">3 days before</option>
-                  <option value="7">7 days before</option>
-                  <option value="14">14 days before</option>
-                </select>
-              </label>
-            </div>
-            <p class="capture-preview" id="capture-preview">Add a task, then choose its due date and reminder.</p>
-            <button class="button" type="submit">Add task and reminder</button>
-          </form>
-          <ul class="list list--bullets" id="capture-list" aria-live="polite"></ul>
-        </section>
       </div>
 
       <details class="panel collapsible-panel clinical-note" id="clinical-note-panel" aria-labelledby="clinical-note-title">

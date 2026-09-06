@@ -411,27 +411,6 @@ function renderAll() {
 
   renderSummary();
 
-  renderItemList({
-    key: "captures",
-    targetId: "capture-list",
-    emptyText: "No captures yet. Use this for temporary general admin notes.",
-    title: (item) => item.text,
-    meta: (item) => `Captured ${formatDateTime(item.createdAt)}`,
-    actions: (item) => [
-      {
-        label: "Edit",
-        onClick: () => {
-          const text = promptText("Edit capture", item.text);
-          if (!text) return;
-          item.text = text;
-          saveState();
-          renderAll();
-        }
-      },
-      { label: "Delete", danger: true, onClick: () => removeItem("captures", item.id) }
-    ]
-  });
-
   renderTodayBlocks();
 
   const todayTasks = state.tasks.filter((item) => item.due === today() && item.status !== "Done");
@@ -541,6 +520,18 @@ function sortBusyBlocks() {
 
 function sortDeadlines() {
   state.deadlines.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function dateKeyFromDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function reminderDateFor(dueDate, leadDays) {
+  if (!dueDate || !leadDays) return "";
+  const reminder = new Date(`${dueDate}T00:00:00`);
+  if (Number.isNaN(reminder.getTime())) return "";
+  reminder.setDate(reminder.getDate() - leadDays);
+  return dateKeyFromDate(reminder);
 }
 
 function fillXenaForm() {
@@ -968,12 +959,18 @@ function setupForms() {
   const captureDue = document.getElementById("capture-due");
   const captureReminderDays = document.getElementById("capture-reminder-days");
   const capturePreview = document.getElementById("capture-preview");
+  const captureSpeechStatus = document.getElementById("capture-speech-status");
+  const captureSubmitStatus = document.getElementById("capture-submit-status");
+  const captureSaveState = document.getElementById("capture-save-state");
+  const captureSpeak = document.getElementById("capture-speak");
 
   function captureTitle(text) {
     return text
       .replace(/\bby\s+(?:next\s+\w+,?\s*)?\d{1,2}\s+[a-z]+\s+\d{4}\b/ig, "")
-      .replace(/\bremind\s+me\s+\d+\s+days?\s+(?:before|beforehand)\b/ig, "")
-      .replace(/\s{2,}/g, " ").replace(/[.;,\s]+$/g, "").trim() || text;
+      .replace(/\bremind\s+me\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|fourteen)\s+days?\s+(?:before|beforehand)\b/ig, "")
+      .replace(/\s{2,}/g, " ")
+      .replace(/^[.;,\s]+|[.;,\s]+$/g, "")
+      .trim() || text;
   }
 
   function dateFromCaptureText(text) {
@@ -986,14 +983,14 @@ function setupForms() {
   }
 
   function reminderDaysFromCaptureText(text) {
-    const match = text.match(/\bremind\s+me\s+(\d+|one|two|three|seven|fourteen)\s+days?\s+(?:before|beforehand)\b/i);
+    const match = text.match(/\bremind\s+me\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten|fourteen)\s+days?\s+(?:before|beforehand)\b/i);
     if (!match) return "";
-    const words = { one: 1, two: 2, three: 3, seven: 7, fourteen: 14 };
+    const words = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, fourteen: 14 };
     const count = words[String(match[1]).toLowerCase()] || Number(match[1]);
     return String(Math.min(365, Math.max(0, count)));
   }
 
-  function refreshCapturePreview(parseText = false) {
+  function capturePlan(parseText = false) {
     if (parseText && !captureDue.value) {
       const parsedDate = dateFromCaptureText(captureText.value);
       if (parsedDate) captureDue.value = parsedDate;
@@ -1002,50 +999,148 @@ function setupForms() {
       const parsedLead = reminderDaysFromCaptureText(captureText.value);
       if (parsedLead) captureReminderDays.value = parsedLead;
     }
-    const task = captureTitle(captureText.value.trim());
-    const due = captureDue.value;
-    const lead = Number(captureReminderDays.value || 0);
-    if (!task) { capturePreview.textContent = "Add a task, then choose its due date and reminder."; return; }
-    if (!due) { capturePreview.textContent = `Will add: ${task}. Add a due date if you want a reminder.`; return; }
-    const reminder = new Date(`${due}T00:00:00`);
-    reminder.setDate(reminder.getDate() - lead);
-    const reminderKey = `${reminder.getFullYear()}-${String(reminder.getMonth() + 1).padStart(2, "0")}-${String(reminder.getDate()).padStart(2, "0")}`;
-    capturePreview.textContent = lead ? `Will add “${task}” due ${formatDate(due)}, plus a reminder on ${formatDate(reminderKey)}.` : `Will add “${task}” due ${formatDate(due)}.`;
+
+    const sourceText = captureText.value.trim();
+    const task = captureTitle(sourceText);
+    const dueDate = captureDue.value;
+    const leadDays = Math.min(365, Math.max(0, Number.parseInt(captureReminderDays.value, 10) || 0));
+    const reminderDate = reminderDateFor(dueDate, leadDays);
+
+    return { sourceText, task, dueDate, leadDays, reminderDate };
+  }
+
+  function setCaptureStatus(message, type = "info") {
+    captureSubmitStatus.textContent = message;
+    captureSubmitStatus.className = `import-status import-status--${type}`;
+  }
+
+  function renderStructuredCapturePreview(plan) {
+    const rows = [];
+    if (!plan.task) {
+      rows.push("Task: waiting for capture text.");
+    } else {
+      rows.push(`Task: ${plan.task}`);
+    }
+    rows.push(`Due date: ${plan.dueDate ? formatDate(plan.dueDate) : "not set"}`);
+    rows.push(`Deadline/reminder: ${plan.dueDate ? `${plan.leadDays} day${plan.leadDays === 1 ? "" : "s"} before due${plan.reminderDate ? ` (${formatDate(plan.reminderDate)})` : ""}` : "choose a due date first"}`);
+    rows.push("Save path: Google Sheet first; browser-only fallback if the Sheet write fails.");
+
+    capturePreview.innerHTML = "";
+    const heading = document.createElement("strong");
+    heading.textContent = "Structured preview";
+    capturePreview.append(heading);
+    rows.forEach((text) => {
+      const row = document.createElement("span");
+      row.textContent = text;
+      capturePreview.append(row);
+    });
+  }
+
+  function refreshCapturePreview(parseText = false) {
+    renderStructuredCapturePreview(capturePlan(parseText));
+  }
+
+  function updateSpeechSupportStatus(message, type = "info") {
+    captureSpeechStatus.textContent = message;
+    captureSpeechStatus.className = `capture-status capture-status--${type}`;
+  }
+
+  function initialiseSpeechCapture() {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      captureSpeak.disabled = true;
+      updateSpeechSupportStatus("Speech input is not supported in this browser. Type the task instead.", "error");
+      return null;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      updateSpeechSupportStatus("Speech recognition is available, but microphone permission cannot be checked here. Type fallback remains ready.", "info");
+      return Recognition;
+    }
+
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: "microphone" }).then((permission) => {
+        const describe = () => {
+          if (permission.state === "granted") updateSpeechSupportStatus("Microphone permission is allowed. Speak can fill the typed field.", "success");
+          else if (permission.state === "denied") updateSpeechSupportStatus("Microphone permission is blocked. Type the task instead or allow the microphone in browser settings.", "error");
+          else updateSpeechSupportStatus("Microphone permission will be requested when Speak is pressed. Typed capture is ready.", "info");
+        };
+        describe();
+        permission.addEventListener("change", describe);
+      }).catch(() => {
+        updateSpeechSupportStatus("Speech recognition is available. Browser permission will be requested when Speak is pressed.", "info");
+      });
+    } else {
+      updateSpeechSupportStatus("Speech recognition is available. Browser permission will be requested when Speak is pressed.", "info");
+    }
+
+    return Recognition;
   }
 
   captureText.addEventListener("input", () => refreshCapturePreview(true));
   captureDue.addEventListener("change", () => refreshCapturePreview(false));
   captureReminderDays.addEventListener("change", () => refreshCapturePreview(false));
 
-  document.getElementById("capture-speak").addEventListener("click", () => {
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Recognition) { capturePreview.textContent = "Speech input is not available in this browser. Type the task instead."; return; }
+  const SpeechRecognitionConstructor = initialiseSpeechCapture();
+
+  captureSpeak.addEventListener("click", () => {
+    const Recognition = SpeechRecognitionConstructor || window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      updateSpeechSupportStatus("Speech input is not supported in this browser. Type the task instead.", "error");
+      return;
+    }
     const recognition = new Recognition();
     recognition.lang = "en-AU"; recognition.interimResults = false; recognition.maxAlternatives = 1;
-    recognition.onresult = (event) => { captureText.value = event.results[0][0].transcript; refreshCapturePreview(true); };
-    recognition.onerror = () => { capturePreview.textContent = "Microphone access was not available. Type the task instead."; };
-    recognition.start();
-    capturePreview.textContent = "Listening… speak the task, due date and reminder lead time.";
+    recognition.onstart = () => {
+      captureSaveState.textContent = "Listening";
+      updateSpeechSupportStatus("Listening. Speak the task, due date and reminder lead time.", "info");
+    };
+    recognition.onresult = (event) => {
+      captureText.value = event.results[0][0].transcript;
+      captureSaveState.textContent = "Review before saving";
+      updateSpeechSupportStatus("Speech captured. Review the text and dates before saving.", "success");
+      refreshCapturePreview(true);
+    };
+    recognition.onerror = (event) => {
+      captureSaveState.textContent = "Typed fallback ready";
+      const blocked = event.error === "not-allowed" || event.error === "service-not-allowed";
+      updateSpeechSupportStatus(blocked ? "Microphone permission is blocked or unavailable. Type the task instead." : "Speech capture did not complete. Type the task instead.", "error");
+    };
+    recognition.onend = () => {
+      if (captureSaveState.textContent === "Listening") captureSaveState.textContent = "Typed fallback ready";
+    };
+    try {
+      recognition.start();
+    } catch {
+      updateSpeechSupportStatus("Speech capture could not start. Type the task instead.", "error");
+    }
   });
 
   document.getElementById("capture-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    const sourceText = captureText.value.trim();
-    if (!sourceText) return;
-    const task = captureTitle(sourceText);
-    const dueDate = captureDue.value;
-    const leadDays = Number(captureReminderDays.value || 0);
-    const reminderDate = dueDate && leadDays ? new Date(`${dueDate}T00:00:00`) : null;
-    if (reminderDate) reminderDate.setDate(reminderDate.getDate() - leadDays);
-    const reminderDateKey = reminderDate ? `${reminderDate.getFullYear()}-${String(reminderDate.getMonth() + 1).padStart(2, "0")}-${String(reminderDate.getDate()).padStart(2, "0")}` : "";
+    const { sourceText, task, dueDate, leadDays, reminderDate } = capturePlan(true);
+    if (!sourceText || !task) return;
+    if (!dueDate) {
+      setCaptureStatus("Choose a due date before creating the work task.", "error");
+      return;
+    }
+    const deadlineRecord = {
+      id: createId(),
+      title: task,
+      date: dueDate,
+      leadDays
+    };
     try {
       await sheetWrite("addTask", { task, type: "Admin", priority: "Normal", status: "Open", dueDate });
-      if (reminderDate) await sheetWrite("addTask", { task: `Reminder: ${task}`, type: "Reminder", priority: "Normal", status: "Open", dueDate: reminderDateKey });
-      setApiStatus(reminderDate ? "Task and reminder saved to Google Sheet." : "Task saved to Google Sheet.", "success");
+      await sheetWrite("addDeadline", { title: task, date: dueDate, leadDays, reminderDate });
+      setApiStatus("Task and deadline/reminder saved to Google Sheet.", "success");
+      setCaptureStatus("Created in the Google Sheet: work task plus deadline/reminder record.", "success");
     } catch (err) {
       state.tasks.push({ id: createId(), title: task, due: dueDate, status: "Open" });
-      if (reminderDate) state.tasks.push({ id: createId(), title: `Reminder: ${task}`, due: reminderDateKey, status: "Open" });
-      setApiStatus("Sheet unavailable — task and reminder saved in this browser only.", "error");
+      state.deadlines.push(deadlineRecord);
+      sortDeadlines();
+      setApiStatus("Sheet write unavailable — Quick Capture saved in this browser only.", "error");
+      setCaptureStatus("Sheet write failed or is unavailable. Stored locally in this browser: work task plus deadline/reminder record.", "error");
     }
     event.target.reset();
     captureReminderDays.value = "2";
