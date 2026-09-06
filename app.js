@@ -1,6 +1,7 @@
 const STORAGE_KEY = "sueAdminDashboard:v1";
 const CONFIG_STORAGE_KEY = "sueAdminDashboard:config:v1";
 const EXPORT_VERSION = 1;
+const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzbfT3gTYqPdkLmxGF6BZGLiGFplwzk9dIFGOJVUExASHPU83Mxxi1-ORAJNNBUfGnf/exec";
 const SHEET_API_TIMEOUT_MS = 8000;
 const REQUIRED_STATE_KEYS = ["captures", "busyBlocks", "tasks", "deadlines", "xenaInfo"];
 const TASK_STATUSES = ["Open", "Waiting", "Done"];
