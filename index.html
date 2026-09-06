@@ -33,11 +33,165 @@
     </header>
 
     <main class="shell" id="main">
+      <nav class="view-tabs" role="tablist" aria-label="Dashboard sections">
+        <button class="view-tab" id="work-tab" type="button" role="tab" aria-selected="true" aria-controls="work-panel">Work</button>
+        <button class="view-tab" id="health-tab" type="button" role="tab" aria-selected="false" aria-controls="health-panel" tabindex="-1">Health</button>
+      </nav>
+
       <div class="sr-only" aria-live="polite">
         <span id="summary-open-tasks">0</span>
         <span id="summary-overdue">0</span>
         <span id="summary-upcoming">0</span>
       </div>
+
+      <section id="work-panel" class="tab-panel" role="tabpanel" aria-labelledby="work-tab">
+      <section class="panel backend-snapshot" aria-labelledby="backend-snapshot-title">
+        <div class="panel__header panel__header--split">
+          <div>
+            <h2 id="backend-snapshot-title" class="section-title">Sheet-backed snapshot</h2>
+            <p class="section-hint">Optional read-only view from the configured Apps Script backend.</p>
+          </div>
+          <span class="save-state" id="backend-state">Local fallback</span>
+        </div>
+        <div class="backend-snapshot__body" id="backend-snapshot">
+          <p class="empty">No backend endpoint configured. The dashboard is using local browser storage.</p>
+        </div>
+        <div class="actions">
+          <button class="button button--ghost" id="backend-refresh" type="button">Refresh Sheet snapshot</button>
+        </div>
+      </section>
+
+      <section class="panel clinical-note" aria-labelledby="clinical-note-title">
+        <div class="panel__header panel__header--split">
+          <div>
+            <h2 id="clinical-note-title" class="section-title">Clinical note formatter</h2>
+            <p class="section-hint">Prepare a temporary, generic note draft before manually entering it into the practice system.</p>
+          </div>
+          <span class="save-state">DOM-only</span>
+        </div>
+
+        <div class="notice-panel notice-panel--clinical" role="note" aria-labelledby="clinical-note-privacy-title">
+          <div class="notice-panel__summary">
+            <span class="notice-panel__badge" aria-hidden="true">i</span>
+            <h3 id="clinical-note-privacy-title" class="notice-panel__title">Temporary preparation only</h3>
+          </div>
+          <div class="notice-panel__body">
+            <p>Input is held only in this page while it is open. It is never saved to localStorage, sent, exported, imported, logged, or written into Feelgood or Awarely.</p>
+            <p>Do not include names, dates of birth, contact details, addresses, identifiers, credentials, or other client-identifying information.</p>
+          </div>
+        </div>
+
+        <form class="form clinical-note__form" id="clinical-note-form">
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">Practice</span>
+              <select id="clinical-practice" required>
+                <option value="Feelgood">Feelgood</option>
+                <option value="Awarely">Awarely</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field__label">Note layout</span>
+              <select id="clinical-layout" required>
+                <option value="progress">Structured progress note</option>
+                <option value="contact">Brief contact note</option>
+                <option value="follow-up">Follow-up and actions note</option>
+              </select>
+            </label>
+          </div>
+
+          <fieldset class="clinical-note__details">
+            <legend>Optional non-identifying session details</legend>
+            <div class="form__row form__row--three">
+              <label class="field">
+                <span class="field__label">Session type</span>
+                <input id="clinical-session-type" type="text" maxlength="80" placeholder="Review, intake, check-in">
+              </label>
+              <label class="field">
+                <span class="field__label">Modality</span>
+                <input id="clinical-modality" type="text" maxlength="80" placeholder="Phone, video, in person">
+              </label>
+              <label class="field">
+                <span class="field__label">Duration</span>
+                <input id="clinical-duration" type="text" maxlength="40" placeholder="Duration only">
+              </label>
+            </div>
+          </fieldset>
+
+          <label class="field">
+            <span class="field__label">Paste/source raw notes</span>
+            <textarea id="clinical-raw-notes" rows="8" placeholder="Paste de-identified working notes here. Do not include client-identifying details."></textarea>
+          </label>
+
+          <label class="field">
+            <span class="field__label">Editable generated preview</span>
+            <textarea id="clinical-preview" rows="12" placeholder="The formatted note will appear here for review and editing."></textarea>
+          </label>
+
+          <div class="actions clinical-note__actions">
+            <button class="button" id="copy-clinical-note" type="button">Copy formatted note</button>
+            <button class="button button--ghost" id="clear-clinical-note" type="button">Clear all</button>
+          </div>
+          <p class="import-status import-status--info" id="clinical-note-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="panel email-draft" aria-labelledby="email-draft-title">
+        <div class="panel__header panel__header--split">
+          <div>
+            <h2 id="email-draft-title" class="section-title">Post-session email draft</h2>
+            <p class="section-hint">Create an editable browser-only test draft. It is not saved, sent or written to the Sheet.</p>
+          </div>
+          <span class="save-state">DOM-only</span>
+        </div>
+
+        <div class="notice-panel notice-panel--clinical" role="note">
+          <div class="notice-panel__summary">
+            <span class="notice-panel__badge" aria-hidden="true">i</span>
+            <h3 class="notice-panel__title">Manual review only</h3>
+          </div>
+          <div class="notice-panel__body">
+            <p>Draft content lives only in this page until refresh. The Gmail button opens a compose window for manual review only; it does not address, save, attach or send.</p>
+          </div>
+        </div>
+
+        <form class="form email-draft__form" id="email-draft-form">
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">Purpose</span>
+              <select id="email-purpose">
+                <option value="Follow-up">Follow-up</option>
+                <option value="Appointment summary">Appointment summary</option>
+                <option value="Resources">Resources</option>
+                <option value="Homework/action plan">Homework/action plan</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field__label">Optional test recipient label</span>
+              <input id="email-test-recipient" type="text" maxlength="80" autocomplete="off" placeholder="Testing label only">
+            </label>
+          </div>
+          <div class="field">
+            <span class="field__label" id="materials-source-label">Temporary dummy materials</span>
+            <div class="materials-box" id="materials-checklist"></div>
+            <div class="inline-add" id="dummy-material-add-row">
+              <input id="new-material-input" type="text" maxlength="120" autocomplete="off" placeholder="Add dummy material label">
+              <button class="button button--ghost" id="add-material" type="button">Add item</button>
+            </div>
+          </div>
+          <label class="field">
+            <span class="field__label">Editable email draft</span>
+            <textarea id="email-draft-output" rows="12" placeholder="Generated test email appears here. It is never sent and clears on refresh."></textarea>
+          </label>
+          <div class="actions">
+            <button class="button" id="generate-email-draft" type="button">Generate draft</button>
+            <button class="button button--ghost" id="copy-email-draft" type="button">Copy draft</button>
+            <button class="button button--ghost" id="open-gmail-draft" type="button">Open Gmail draft</button>
+            <button class="button button--danger" id="clear-email-draft" type="button">Clear draft</button>
+          </div>
+          <p class="import-status import-status--info" id="email-draft-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
 
       <div class="dashboard-grid" aria-label="Dashboard workspace">
         <section class="panel dashboard-card" aria-labelledby="today-title">
@@ -140,6 +294,67 @@
           <ul class="list list--bullets" id="capture-list" aria-live="polite"></ul>
         </section>
       </div>
+      </section>
+
+      <section id="health-panel" class="tab-panel" role="tabpanel" aria-labelledby="health-tab" hidden>
+      <section class="panel personal-health" aria-labelledby="personal-health-title">
+        <div class="panel__header panel__header--split">
+          <div>
+            <h2 id="personal-health-title" class="section-title">Health</h2>
+            <p class="section-hint">Private wellbeing tracker for this browser. Separate from work and clinical data.</p>
+          </div>
+          <span class="save-state" id="health-week-label">This week</span>
+        </div>
+
+        <div class="notice-panel notice-panel--clinical" role="note" aria-labelledby="personal-health-privacy-title">
+          <div class="notice-panel__summary">
+            <span class="notice-panel__badge" aria-hidden="true">i</span>
+            <h3 id="personal-health-privacy-title" class="notice-panel__title">Private and local only</h3>
+          </div>
+          <div class="notice-panel__body">
+            <p>Habit completions are stored only in this browser under a dedicated key. They are never included in dashboard export or import, Information for Xena, the clinical note formatter, or any network request.</p>
+            <p>Do not enter symptoms, diagnoses, medications or any real health information here. This is a simple habit checklist only.</p>
+          </div>
+        </div>
+
+        <div class="personal-health__section">
+          <div class="personal-health__row">
+            <strong class="personal-health__label">Daily activity — 35 minutes</strong>
+            <span class="personal-health__meta" id="health-activity-summary">0 of 7 days</span>
+          </div>
+          <ol class="personal-health__days" id="health-days" aria-label="Daily activity for this week"></ol>
+        </div>
+
+        <div class="personal-health__section">
+          <div class="personal-health__row">
+            <strong class="personal-health__label">Strength — 2 sessions this week</strong>
+            <span class="personal-health__meta" id="health-strength-summary">0 of 2</span>
+          </div>
+          <div class="personal-health__counter">
+            <button class="mini-button" type="button" id="health-strength-undo" aria-label="Undo strength session">−</button>
+            <div class="personal-health__pips" id="health-strength-pips" aria-hidden="true"></div>
+            <button class="mini-button" type="button" id="health-strength-add" aria-label="Mark strength session">+</button>
+          </div>
+        </div>
+
+        <div class="personal-health__section">
+          <div class="personal-health__row">
+            <strong class="personal-health__label">Yoga or Pilates — 2 sessions this week</strong>
+            <span class="personal-health__meta" id="health-yoga-summary">0 of 2</span>
+          </div>
+          <div class="personal-health__counter">
+            <button class="mini-button" type="button" id="health-yoga-undo" aria-label="Undo yoga or Pilates session">−</button>
+            <div class="personal-health__pips" id="health-yoga-pips" aria-hidden="true"></div>
+            <button class="mini-button" type="button" id="health-yoga-add" aria-label="Mark yoga or Pilates session">+</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="button button--danger" type="button" id="health-reset-week">Reset this week</button>
+        </div>
+        <p class="import-status import-status--info" id="health-status" role="status" aria-live="polite"></p>
+      </section>
+      </section>
 
       <details class="settings-footer" id="settings-panel">
         <summary class="settings-footer__summary">
@@ -199,6 +414,27 @@
               <p>Keep this dashboard to general admin information only: no client names, matter details, passwords, credentials or real email addresses.</p>
               <p><strong>Back up before changing devices or clearing browser data.</strong> Use Export JSON backup in Information for Xena, then Import JSON to restore it later.</p>
             </div>
+          </section>
+
+          <section class="panel panel--backend" aria-labelledby="backend-config-title">
+            <div class="panel__header panel__header--split">
+              <div>
+                <h2 id="backend-config-title" class="section-title">Backend endpoint</h2>
+                <p class="section-hint">Optional Apps Script web app exec URL for Sheet-backed reads.</p>
+              </div>
+              <span class="save-state" id="backend-config-state">Not configured</span>
+            </div>
+            <form class="form" id="backend-config-form">
+              <label class="field">
+                <span class="field__label">Apps Script web app exec URL</span>
+                <input id="backend-endpoint" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+              </label>
+              <div class="actions">
+                <button class="button" type="submit">Save endpoint locally</button>
+                <button class="button button--ghost" id="clear-backend-endpoint" type="button">Use local fallback</button>
+              </div>
+              <p class="import-status import-status--info" id="backend-config-status" role="status" aria-live="polite"></p>
+            </form>
           </section>
         </div>
       </details>

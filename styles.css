@@ -584,6 +584,195 @@ textarea:focus {
   grid-column: 1 / -1;
 }
 
+/* -------- Clinical note formatter -------- */
+
+.clinical-note {
+  display: grid;
+  gap: 14px;
+  background: #ffffff;
+}
+
+.clinical-note .panel__header {
+  margin-bottom: 0;
+}
+
+.notice-panel--clinical {
+  padding: 4px 12px;
+}
+
+.clinical-note__form {
+  gap: 12px;
+}
+
+.clinical-note__details {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--pale);
+}
+
+.clinical-note__details legend {
+  padding: 0 6px;
+  color: var(--navy);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.form__row--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.clinical-note textarea {
+  min-height: 150px;
+}
+
+#clinical-preview {
+  min-height: 230px;
+  line-height: 1.45;
+}
+
+.clinical-note__actions {
+  align-items: center;
+}
+
+/* -------- Personal health -------- */
+
+.personal-health {
+  display: grid;
+  gap: 14px;
+  background: #ffffff;
+}
+
+.personal-health .panel__header {
+  margin-bottom: 0;
+}
+
+.personal-health__section {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--pale);
+}
+
+.personal-health__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.personal-health__label {
+  color: var(--navy);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.personal-health__meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.personal-health__days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.personal-health__day {
+  display: grid;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--navy);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.personal-health__day:hover {
+  border-color: var(--navy);
+  background: var(--pale);
+}
+
+.personal-health__day.is-today {
+  border-color: var(--navy);
+  box-shadow: inset 0 0 0 1px var(--navy);
+}
+
+.personal-health__day.is-done {
+  background: #5da66b;
+  border-color: #5da66b;
+  color: #ffffff;
+}
+
+.personal-health__day-name {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.personal-health__day-mark {
+  display: block;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.personal-health__counter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.personal-health__pips {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.personal-health__pip {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--navy);
+  background: #ffffff;
+}
+
+.personal-health__pip.is-filled {
+  background: var(--navy);
+}
+
+.personal-health__pip.is-bonus {
+  border-color: #5da66b;
+  background: #5da66b;
+}
+
+@media (max-width: 640px) {
+  .personal-health__days {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .personal-health__day {
+    padding: 6px 2px;
+    font-size: 0.72rem;
+  }
+}
+
 /* -------- Buttons -------- */
 
 .button {
@@ -713,6 +902,31 @@ textarea:focus {
   font-size: 0.95rem;
 }
 
+.status-pill {
+  justify-self: start;
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #eef2f6;
+  color: var(--navy-soft);
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.status-pill--waiting {
+  border-color: var(--warn-line);
+  background: var(--warn-tint);
+  color: #7a5a24;
+}
+
+.status-pill--done {
+  border-color: #b8dbc5;
+  background: #e8f5ee;
+  color: var(--success);
+}
+
 .item__actions {
   display: flex;
   flex-wrap: wrap;
@@ -738,7 +952,7 @@ textarea:focus {
 
 #task-list .item::before,
 #today-task-list .item::before {
-  content: "✓";
+  content: "";
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -747,6 +961,14 @@ textarea:focus {
   height: 30px;
   margin-top: 2px;
   border-radius: 6px;
+  border: 2px solid #5da66b;
+  background: #ffffff;
+}
+
+#task-list .item.is-done::before,
+#today-task-list .item.is-done::before {
+  content: "✓";
+  border-color: #5da66b;
   background: #5da66b;
   color: #ffffff;
   font-weight: 900;
@@ -944,6 +1166,10 @@ textarea:focus {
 @media (max-width: 920px) {
   .workspace,
   .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form__row--three {
     grid-template-columns: 1fr;
   }
 

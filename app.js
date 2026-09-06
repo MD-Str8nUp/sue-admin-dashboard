@@ -1,6 +1,9 @@
 const STORAGE_KEY = "sueAdminDashboard:v1";
+const CONFIG_STORAGE_KEY = "sueAdminDashboard:config:v1";
 const EXPORT_VERSION = 1;
+const SHEET_API_TIMEOUT_MS = 8000;
 const REQUIRED_STATE_KEYS = ["captures", "busyBlocks", "tasks", "deadlines", "xenaInfo"];
+const TASK_STATUSES = ["Open", "Waiting", "Done"];
 
 const initialState = {
   captures: [],
@@ -62,6 +65,45 @@ const demoState = {
 };
 
 let state = loadState();
+let backendConfig = loadBackendConfig();
+let backendMaterials = [];
+let backendMaterialsSource = "dummy";
+
+function normaliseEndpoint(value) {
+  const endpoint = String(value || "").trim();
+  if (!endpoint) return "";
+  try {
+    const url = new URL(endpoint);
+    if (url.protocol !== "https:" || !/\.google\.com$/i.test(url.hostname)) return "";
+    if (!/\/macros\/s\/.+\/exec$/i.test(url.pathname)) return "";
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+function loadBackendConfig() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CONFIG_STORAGE_KEY) || "{}");
+    return { endpoint: normaliseEndpoint(parsed.endpoint || "") };
+  } catch {
+    return { endpoint: "" };
+  }
+}
+
+function saveBackendConfig() {
+  localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(backendConfig));
+}
+
+function backendConfigured() {
+  return Boolean(backendConfig.endpoint);
+}
+
+function backendUrl(params) {
+  const url = new URL(backendConfig.endpoint);
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+  return url.toString();
+}
 
 function loadState() {
   try {
@@ -141,7 +183,19 @@ function formatDateTime(value) {
   }).format(new Date(value));
 }
 
-function renderItemList({ key, targetId, emptyText, title, meta, actions, items }) {
+function normaliseTaskStatus(status) {
+  return TASK_STATUSES.includes(status) ? status : "Open";
+}
+
+function taskStatusPill(item) {
+  const label = normaliseTaskStatus(item.status);
+  return {
+    label,
+    variant: label.toLowerCase()
+  };
+}
+
+function renderItemList({ key, targetId, emptyText, title, meta, actions, items, pill }) {
   const list = document.getElementById(targetId);
   const template = document.getElementById("item-template");
   const sourceItems = items || state[key];
@@ -161,6 +215,16 @@ function renderItemList({ key, targetId, emptyText, title, meta, actions, items 
     node.classList.toggle("is-done", item.status === "Done");
     node.querySelector(".item__title").textContent = title(item);
     node.querySelector(".item__meta").textContent = meta(item);
+
+    if (pill) {
+      const info = pill(item);
+      if (info && info.label) {
+        const badge = document.createElement("span");
+        badge.className = `status-pill status-pill--${info.variant}`;
+        badge.textContent = info.label;
+        node.querySelector(".item__content").append(badge);
+      }
+    }
 
     const actionWrap = node.querySelector(".item__actions");
     actions(item).forEach((action) => {
@@ -188,10 +252,61 @@ function promptDate(label, currentValue) {
   return next.trim();
 }
 
+function promptTaskStatus(currentValue) {
+  const next = window.prompt("Edit status: Open, Waiting or Done", normaliseTaskStatus(currentValue));
+  if (next === null) return null;
+
+  const status = TASK_STATUSES.find((option) => option.toLowerCase() === next.trim().toLowerCase());
+  if (!status) {
+    window.alert("Please use Open, Waiting or Done.");
+    return null;
+  }
+
+  return status;
+}
+
 function removeItem(key, id) {
   state[key] = state[key].filter((item) => item.id !== id);
   saveState();
   renderAll();
+}
+
+function removeTask(id) {
+  const task = state.tasks.find((item) => item.id === id);
+  if (!task) return;
+
+  if (!window.confirm(`Delete this task?\n\n${task.title}`)) return;
+  removeItem("tasks", id);
+}
+
+function taskActions(item) {
+  return [
+    {
+      label: item.status === "Done" ? "Reopen" : "Done",
+      onClick: () => {
+        item.status = item.status === "Done" ? "Open" : "Done";
+        saveState();
+        renderAll();
+      }
+    },
+    {
+      label: "Edit",
+      onClick: () => {
+        const title = promptText("Edit task", item.title);
+        if (!title) return;
+        const due = promptDate("Edit due date", item.due);
+        if (due === null) return;
+        const status = promptTaskStatus(item.status);
+        if (status === null) return;
+        item.title = title;
+        item.due = due;
+        item.status = status;
+        saveState();
+        renderAll();
+      }
+    },
+    { label: "Delete", danger: true, onClick: () => removeTask(item.id) }
+  ];
 }
 
 function renderSummary() {
@@ -278,31 +393,9 @@ function renderAll() {
     emptyText: "No extra tasks for today.",
     items: todayTasks,
     title: (item) => item.title,
-    meta: (item) => (item.due ? formatDate(item.due) : item.status),
-    actions: (item) => [
-      {
-        label: item.status === "Done" ? "Reopen" : "Done",
-        onClick: () => {
-          item.status = item.status === "Done" ? "Open" : "Done";
-          saveState();
-          renderAll();
-        }
-      },
-      {
-        label: "Edit",
-        onClick: () => {
-          const title = promptText("Edit task", item.title);
-          if (!title) return;
-          const due = promptDate("Edit due date", item.due);
-          if (due === null) return;
-          item.title = title;
-          item.due = due;
-          saveState();
-          renderAll();
-        }
-      },
-      { label: "Delete", danger: true, onClick: () => removeItem("tasks", item.id) }
-    ]
+    meta: (item) => (item.due ? formatDate(item.due) : "No date set"),
+    pill: taskStatusPill,
+    actions: taskActions
   });
 
   renderItemList({
@@ -311,31 +404,9 @@ function renderAll() {
     emptyText: "No weekly tasks yet.",
     items: weekTasks,
     title: (item) => item.title,
-    meta: (item) => (item.due ? formatDate(item.due) : item.status),
-    actions: (item) => [
-      {
-        label: item.status === "Done" ? "Reopen" : "Done",
-        onClick: () => {
-          item.status = item.status === "Done" ? "Open" : "Done";
-          saveState();
-          renderAll();
-        }
-      },
-      {
-        label: "Edit",
-        onClick: () => {
-          const title = promptText("Edit task", item.title);
-          if (!title) return;
-          const due = promptDate("Edit due date", item.due);
-          if (due === null) return;
-          item.title = title;
-          item.due = due;
-          saveState();
-          renderAll();
-        }
-      },
-      { label: "Delete", danger: true, onClick: () => removeItem("tasks", item.id) }
-    ]
+    meta: (item) => (item.due ? formatDate(item.due) : "No date set"),
+    pill: taskStatusPill,
+    actions: taskActions
   });
 
   renderItemList({
@@ -530,6 +601,148 @@ function payloadAsText(payload) {
   ].join("\n");
 }
 
+function cleanClinicalLines(value) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function bulletClinicalLines(value) {
+  const lines = cleanClinicalLines(value);
+  if (!lines.length) return ["- "];
+  return lines.map((line) => `- ${line.replace(/^[-*]\s*/, "")}`);
+}
+
+function clinicalDetailLines() {
+  const details = [
+    ["Practice", document.getElementById("clinical-practice").value],
+    ["Session type", document.getElementById("clinical-session-type").value.trim()],
+    ["Modality", document.getElementById("clinical-modality").value.trim()],
+    ["Duration", document.getElementById("clinical-duration").value.trim()]
+  ];
+
+  return details
+    .filter(([, value]) => value)
+    .map(([label, value]) => `${label}: ${value}`);
+}
+
+function clinicalTemplate(layout, rawNotes) {
+  const bullets = bulletClinicalLines(rawNotes);
+
+  if (layout === "contact") {
+    return [
+      "Contact summary",
+      ...bullets,
+      "",
+      "Clinical observations",
+      "- ",
+      "",
+      "Outcome",
+      "- "
+    ];
+  }
+
+  if (layout === "follow-up") {
+    return [
+      "Presenting themes",
+      ...bullets,
+      "",
+      "Actions completed",
+      "- ",
+      "",
+      "Follow-up plan",
+      "- "
+    ];
+  }
+
+  return [
+    "Subjective / reported themes",
+    ...bullets,
+    "",
+    "Objective / session observations",
+    "- ",
+    "",
+    "Clinical formulation / summary",
+    "- ",
+    "",
+    "Plan",
+    "- "
+  ];
+}
+
+function generateClinicalNote() {
+  const layout = document.getElementById("clinical-layout").value;
+  const rawNotes = document.getElementById("clinical-raw-notes").value;
+  const details = clinicalDetailLines();
+  const sections = clinicalTemplate(layout, rawNotes);
+
+  return [
+    "Clinical note draft",
+    "Temporary preparation only - de-identified content required",
+    "",
+    ...details,
+    ...(details.length ? [""] : []),
+    ...sections
+  ].join("\n");
+}
+
+function updateClinicalPreview() {
+  document.getElementById("clinical-preview").value = generateClinicalNote();
+  const status = document.getElementById("clinical-note-status");
+  status.textContent = "Preview updated in this page only.";
+  status.className = "import-status import-status--info";
+}
+
+async function copyClinicalPreview() {
+  const preview = document.getElementById("clinical-preview");
+  const status = document.getElementById("clinical-note-status");
+
+  try {
+    await navigator.clipboard.writeText(preview.value);
+    status.textContent = "Formatted note copied to clipboard.";
+    status.className = "import-status import-status--success";
+  } catch {
+    preview.focus();
+    preview.select();
+    status.textContent = "Copy unavailable. The note is selected so you can copy it manually.";
+    status.className = "import-status import-status--error";
+  }
+}
+
+function clearClinicalNote() {
+  document.getElementById("clinical-note-form").reset();
+  document.getElementById("clinical-preview").value = "";
+  const status = document.getElementById("clinical-note-status");
+  status.textContent = "Clinical note fields cleared from this page.";
+  status.className = "import-status import-status--info";
+}
+
+function setupClinicalNoteFormatter() {
+  document.getElementById("clinical-note-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+  });
+
+  const fieldIds = [
+    "clinical-practice",
+    "clinical-layout",
+    "clinical-session-type",
+    "clinical-modality",
+    "clinical-duration",
+    "clinical-raw-notes"
+  ];
+
+  fieldIds.forEach((id) => {
+    const field = document.getElementById(id);
+    field.addEventListener("input", updateClinicalPreview);
+    field.addEventListener("change", updateClinicalPreview);
+  });
+
+  document.getElementById("copy-clinical-note").addEventListener("click", copyClinicalPreview);
+  document.getElementById("clear-clinical-note").addEventListener("click", clearClinicalNote);
+  updateClinicalPreview();
+}
+
 function setupForms() {
   document.getElementById("capture-form").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -627,5 +840,365 @@ function setupForms() {
   });
 }
 
+const HEALTH_STORAGE_KEY = "sueAdminDashboard:health:v1";
+const HEALTH_DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const HEALTH_TARGETS = { strength: 2, yoga: 2, activityMinutes: 35, activityDaysPerWeek: 7 };
+
+function healthMondayOf(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = d.getDay();
+  const offset = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + offset);
+  return d;
+}
+
+function healthIsoDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function healthEmptyWeek(weekStart) {
+  return { weekStart, days: {}, strength: 0, yoga: 0 };
+}
+
+function healthLoad() {
+  const todayMonday = healthIsoDate(healthMondayOf(new Date()));
+  try {
+    const raw = localStorage.getItem(HEALTH_STORAGE_KEY);
+    if (!raw) return healthEmptyWeek(todayMonday);
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || parsed.weekStart !== todayMonday) {
+      return healthEmptyWeek(todayMonday);
+    }
+    return {
+      weekStart: todayMonday,
+      days: parsed.days && typeof parsed.days === "object" ? parsed.days : {},
+      strength: Math.max(0, Number.parseInt(parsed.strength, 10) || 0),
+      yoga: Math.max(0, Number.parseInt(parsed.yoga, 10) || 0)
+    };
+  } catch {
+    return healthEmptyWeek(todayMonday);
+  }
+}
+
+let healthState = healthLoad();
+
+function healthSave() {
+  localStorage.setItem(HEALTH_STORAGE_KEY, JSON.stringify(healthState));
+}
+
+function healthWeekDates() {
+  const start = new Date(`${healthState.weekStart}T00:00:00`);
+  return HEALTH_DAY_NAMES.map((_, i) => {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    return healthIsoDate(d);
+  });
+}
+
+function healthFormatWeekLabel() {
+  const dates = healthWeekDates();
+  const start = new Date(`${dates[0]}T00:00:00`);
+  const end = new Date(`${dates[6]}T00:00:00`);
+  const fmt = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short" });
+  return `Week of ${fmt.format(start)} – ${fmt.format(end)}`;
+}
+
+function healthSetStatus(message, type = "info") {
+  const el = document.getElementById("health-status");
+  el.textContent = message;
+  el.className = `import-status import-status--${type}`;
+}
+
+function healthRenderPips(container, count, target) {
+  container.innerHTML = "";
+  const total = Math.max(target, count);
+  for (let i = 0; i < total; i += 1) {
+    const pip = document.createElement("span");
+    pip.className = "personal-health__pip";
+    if (i < count) pip.classList.add("is-filled");
+    if (i >= target && i < count) pip.classList.add("is-bonus");
+    container.append(pip);
+  }
+}
+
+function healthRender() {
+  document.getElementById("health-week-label").textContent = healthFormatWeekLabel();
+
+  const daysList = document.getElementById("health-days");
+  daysList.innerHTML = "";
+  const dates = healthWeekDates();
+  const todayIso = healthIsoDate(new Date());
+  let doneCount = 0;
+
+  dates.forEach((iso, i) => {
+    const done = Boolean(healthState.days[iso]);
+    if (done) doneCount += 1;
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "personal-health__day";
+    if (iso === todayIso) btn.classList.add("is-today");
+    if (done) btn.classList.add("is-done");
+    btn.setAttribute("aria-pressed", done ? "true" : "false");
+    const dayNum = new Date(`${iso}T00:00:00`).getDate();
+    btn.setAttribute(
+      "aria-label",
+      `${HEALTH_DAY_NAMES[i]} ${dayNum} — ${done ? "mark undone" : "mark 35 minute activity done"}`
+    );
+    btn.innerHTML = `<span class="personal-health__day-name">${HEALTH_DAY_NAMES[i]}</span>` +
+      `<span>${dayNum}</span>` +
+      `<span class="personal-health__day-mark" aria-hidden="true">${done ? "✓" : "○"}</span>`;
+    btn.addEventListener("click", () => {
+      if (healthState.days[iso]) {
+        delete healthState.days[iso];
+      } else {
+        healthState.days[iso] = true;
+      }
+      healthSave();
+      healthRender();
+    });
+    li.append(btn);
+    daysList.append(li);
+  });
+
+  document.getElementById("health-activity-summary").textContent =
+    `${doneCount} of ${HEALTH_TARGETS.activityDaysPerWeek} days`;
+
+  document.getElementById("health-strength-summary").textContent =
+    `${healthState.strength} of ${HEALTH_TARGETS.strength}`;
+  healthRenderPips(document.getElementById("health-strength-pips"), healthState.strength, HEALTH_TARGETS.strength);
+
+  document.getElementById("health-yoga-summary").textContent =
+    `${healthState.yoga} of ${HEALTH_TARGETS.yoga}`;
+  healthRenderPips(document.getElementById("health-yoga-pips"), healthState.yoga, HEALTH_TARGETS.yoga);
+}
+
+function healthAdjust(field, delta) {
+  const next = Math.max(0, Math.min(14, healthState[field] + delta));
+  if (next === healthState[field]) return;
+  healthState[field] = next;
+  healthSave();
+  healthRender();
+}
+
+function setupPersonalHealth() {
+  document.getElementById("health-strength-add").addEventListener("click", () => healthAdjust("strength", 1));
+  document.getElementById("health-strength-undo").addEventListener("click", () => healthAdjust("strength", -1));
+  document.getElementById("health-yoga-add").addEventListener("click", () => healthAdjust("yoga", 1));
+  document.getElementById("health-yoga-undo").addEventListener("click", () => healthAdjust("yoga", -1));
+  document.getElementById("health-reset-week").addEventListener("click", () => {
+    if (!window.confirm("Reset all personal health habits for this week? This cannot be undone.")) return;
+    healthState = healthEmptyWeek(healthIsoDate(healthMondayOf(new Date())));
+    healthSave();
+    healthRender();
+    healthSetStatus("Personal health week reset in this browser.", "success");
+  });
+  healthRender();
+}
+
+setupClinicalNoteFormatter();
 setupForms();
+setupPersonalHealth();
 renderAll();
+hydrateFromSheetApi();
+
+function jsonpGet(action, timeoutMs = SHEET_API_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    const cbName = `__sueSheetCb_${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
+    const script = document.createElement("script");
+    let timer;
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = (payload) => {
+      cleanup();
+      if (payload && payload.ok) {
+        resolve(payload.data);
+      } else {
+        reject(new Error(payload && payload.error ? payload.error : "sheet api error"));
+      }
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("sheet api unreachable"));
+    };
+
+    timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("sheet api timeout"));
+    }, timeoutMs);
+
+    const sep = SHEET_API_URL.includes("?") ? "&" : "?";
+    script.src = `${SHEET_API_URL}${sep}action=${encodeURIComponent(action)}&callback=${cbName}`;
+    document.head.append(script);
+  });
+}
+
+function normaliseSheetStatus(raw) {
+  const s = String(raw || "").trim().toLowerCase();
+  if (s === "done" || s === "complete" || s === "completed") return "Done";
+  if (s === "waiting" || s === "blocked" || s === "in progress") return "Waiting";
+  return "Open";
+}
+
+function mapSheetTasks(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .filter((r) => r && r.task)
+    .map((r) => ({
+      id: `sheet-task-${r.rowNumber}`,
+      title: String(r.task || "").trim(),
+      due: r.dueDate || "",
+      status: normaliseSheetStatus(r.status)
+    }));
+}
+
+function pickField(item, keys) {
+  for (const k of keys) {
+    if (item && Object.hasOwn(item, k) && item[k]) return String(item[k]).trim();
+  }
+  return "";
+}
+
+function mapSheetDeadlines(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .map((r) => {
+      const title = pickField(r, ["Title", "title", "Deadline", "Name", "Label", "Task"]);
+      const date = pickField(r, ["Date", "date", "Due", "Due date", "dueDate"]);
+      const leadRaw = pickField(r, ["Lead", "lead", "Lead time", "leadDays", "Lead days"]);
+      const leadDays = Number.parseInt(leadRaw, 10);
+      if (!title && !date) return null;
+      return {
+        id: `sheet-deadline-${r.rowNumber || createId()}`,
+        title: title || "(untitled deadline)",
+        date: date || "",
+        leadDays: Number.isFinite(leadDays) ? Math.max(0, leadDays) : 7
+      };
+    })
+    .filter(Boolean);
+}
+
+function setApiStatus(message, type = "info") {
+  const el = document.getElementById("sheet-api-status");
+  if (!el) return;
+  el.textContent = message;
+  el.className = `sheet-api-status sheet-api-status--${type}`;
+}
+
+function ensureApiStatusElement() {
+  if (document.getElementById("sheet-api-status")) return;
+  const host = document.querySelector(".topbar__brand") || document.querySelector(".topbar__inner");
+  if (!host) return;
+  const el = document.createElement("p");
+  el.id = "sheet-api-status";
+  el.className = "sheet-api-status sheet-api-status--info";
+  el.setAttribute("role", "status");
+  el.setAttribute("aria-live", "polite");
+  el.textContent = "Loading from sheet…";
+  host.append(el);
+}
+
+function applyDashboardData(data) {
+  if (!data) return;
+  const tasks = mapSheetTasks(data.tasks);
+  const deadlines = mapSheetDeadlines(data.deadlines);
+  state.tasks = tasks;
+  state.deadlines = deadlines;
+  saveState();
+  renderAll();
+}
+
+function applyPersonalData(data) {
+  if (!data || typeof data !== "object") return;
+  const weekStart = healthState.weekStart;
+  const weekDates = healthWeekDates();
+  const weekSet = new Set(weekDates);
+
+  const days = {};
+  if (data.days && typeof data.days === "object") {
+    for (const [iso, minutes] of Object.entries(data.days)) {
+      if (weekSet.has(iso) && Number(minutes) > 0) days[iso] = true;
+    }
+  }
+
+  const strengthCount = countTimestampsInWeek(data.strength, weekDates[0]);
+  const yogaCount = countTimestampsInWeek(data.yoga, weekDates[0]);
+
+  healthState = {
+    weekStart,
+    days,
+    strength: strengthCount,
+    yoga: yogaCount
+  };
+  healthSave();
+  healthRender();
+}
+
+function countTimestampsInWeek(list, weekStartIso) {
+  if (!Array.isArray(list) || !weekStartIso) return 0;
+  const start = new Date(`${weekStartIso}T00:00:00`);
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7);
+  let n = 0;
+  for (const ts of list) {
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) continue;
+    if (d >= start && d < end) n += 1;
+  }
+  return n;
+}
+
+async function hydrateFromSheetApi() {
+  ensureApiStatusElement();
+  setApiStatus("Connecting to sheet…", "info");
+
+  const results = await Promise.allSettled([
+    jsonpGet("dashboardData"),
+    jsonpGet("personalData"),
+    jsonpGet("approvedMaterials")
+  ]);
+
+  const [dashboard, personal, materials] = results;
+  const failures = [];
+
+  if (dashboard.status === "fulfilled") {
+    try {
+      applyDashboardData(dashboard.value);
+    } catch (err) {
+      failures.push(`tasks (${err.message})`);
+    }
+  } else {
+    failures.push(`tasks (${dashboard.reason && dashboard.reason.message})`);
+  }
+
+  if (personal.status === "fulfilled") {
+    try {
+      applyPersonalData(personal.value);
+    } catch (err) {
+      failures.push(`wellbeing (${err.message})`);
+    }
+  } else {
+    failures.push(`wellbeing (${personal.reason && personal.reason.message})`);
+  }
+
+  if (materials.status === "fulfilled") {
+    window.__sueApprovedMaterials = materials.value;
+  } else {
+    failures.push(`materials (${materials.reason && materials.reason.message})`);
+  }
+
+  if (!failures.length) {
+    setApiStatus("Loaded from sheet.", "success");
+  } else if (failures.length === 3) {
+    setApiStatus("Offline: showing local data only.", "error");
+  } else {
+    setApiStatus(`Partial load. Local fallback for: ${failures.join(", ")}.`, "error");
+  }
+}
