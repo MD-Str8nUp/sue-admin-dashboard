@@ -721,6 +721,13 @@ h2 {
   letter-spacing: 0.02em;
 }
 
+.field__hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 input,
 select,
 textarea {
@@ -806,6 +813,49 @@ textarea:focus {
 
 .clinical-note__actions {
   align-items: center;
+}
+
+/* -------- Letter packer -------- */
+
+.letter-packer {
+  display: grid;
+  gap: 14px;
+  background: #ffffff;
+}
+
+.letter-packer .panel__header {
+  margin-bottom: 0;
+}
+
+.letter-packer__form {
+  gap: 12px;
+}
+
+#letter-preview {
+  min-height: 280px;
+  line-height: 1.45;
+}
+
+#letter-print-area {
+  display: none;
+}
+
+#letter-print-area pre {
+  margin: 0;
+  color: #111827;
+  font: 12pt/1.45 Arial, Helvetica, sans-serif;
+  white-space: pre-wrap;
+}
+
+@media print {
+  body > *:not(#letter-print-area) {
+    display: none !important;
+  }
+
+  #letter-print-area {
+    display: block;
+    padding: 24mm 18mm;
+  }
 }
 
 /* -------- Personal health -------- */

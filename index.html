@@ -338,6 +338,75 @@
         </form>
         </div>
       </details>
+
+      <details class="panel collapsible-panel letter-packer" id="letter-packer-panel" aria-labelledby="letter-packer-title">
+        <summary class="collapsible-panel__summary">
+          <span><strong id="letter-packer-title">Letter + PDF Packer (Draft)</strong><small>Prepare a draft letter and print/save as PDF from the browser</small></span>
+          <span class="collapsible-panel__state" aria-hidden="true"></span>
+        </summary>
+        <div class="collapsible-panel__body">
+          <div class="panel__header panel__header--split">
+            <div>
+              <p class="section-hint">Draft-only workspace. Nothing is saved, sent, uploaded, or written back to the Sheet.</p>
+            </div>
+            <span class="save-state">DOM-only</span>
+          </div>
+
+          <div class="notice-panel notice-panel--clinical" role="note" aria-labelledby="letter-packer-privacy-title">
+            <div class="notice-panel__summary">
+              <span class="notice-panel__badge" aria-hidden="true">i</span>
+              <h3 id="letter-packer-privacy-title" class="notice-panel__title">Draft workspace only</h3>
+            </div>
+            <div class="notice-panel__body">
+              <p>Fields on this form are held only in this page while it is open. They are never written to the Sheet, localStorage, email, uploads or any practice system. Refreshing the page clears everything.</p>
+              <p><strong>Placeholder templates only.</strong> Final approved letter templates, letterhead/headers, sign-off blocks and document naming rules are still required before any letter is sent to a client.</p>
+            </div>
+          </div>
+
+          <form class="form letter-packer__form" id="letter-packer-form">
+            <div class="form__row">
+              <label class="field">
+                <span class="field__label">Recipient / client name</span>
+                <input id="letter-recipient" type="text" maxlength="120" autocomplete="off" placeholder="Recipient name (draft only)">
+              </label>
+              <label class="field">
+                <span class="field__label">Matter / reference</span>
+                <input id="letter-matter" type="text" maxlength="120" autocomplete="off" placeholder="Matter or reference (draft only)">
+              </label>
+            </div>
+            <label class="field">
+              <span class="field__label">Letter purpose</span>
+              <input id="letter-purpose" type="text" maxlength="160" autocomplete="off" placeholder="Purpose or subject of the letter (draft only)">
+            </label>
+            <label class="field">
+              <span class="field__label">Template (placeholder / draft only)</span>
+              <select id="letter-template">
+                <option value="general">Placeholder — General correspondence (draft only)</option>
+                <option value="followup">Placeholder — Follow-up letter (draft only)</option>
+                <option value="request">Placeholder — Information request (draft only)</option>
+                <option value="acknowledgement">Placeholder — Acknowledgement (draft only)</option>
+              </select>
+              <small class="field__hint">These are placeholder wordings. Approved templates are not yet configured.</small>
+            </label>
+            <div class="field">
+              <span class="field__label" id="letter-materials-label">Supporting materials</span>
+              <div class="materials-box" id="letter-materials-checklist"></div>
+              <small class="field__hint">Shared with the post-session email draft picker. No files are attached or uploaded.</small>
+            </div>
+            <label class="field">
+              <span class="field__label">Editable generated letter draft</span>
+              <textarea id="letter-preview" rows="16" placeholder="Draft letter appears here. Edit freely before printing."></textarea>
+            </label>
+            <div class="actions letter-packer__actions">
+              <button class="button" id="generate-letter-draft" type="button">Generate draft</button>
+              <button class="button button--ghost" id="download-letter-draft" type="button">Download text package</button>
+              <button class="button" id="print-letter-draft" type="button">Print / Save as PDF</button>
+              <button class="button button--danger" id="clear-letter-draft" type="button">Clear draft</button>
+            </div>
+            <p class="import-status import-status--info" id="letter-packer-status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </details>
       </section>
 
       <section id="progress-panel" class="tab-panel" role="tabpanel" aria-labelledby="progress-tab" hidden>
@@ -509,6 +578,8 @@
         <div class="item__actions"></div>
       </li>
     </template>
+
+    <div id="letter-print-area" aria-hidden="true"></div>
 
     <script src="app.js"></script>
   </body>

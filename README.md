@@ -6,13 +6,16 @@ Standalone Phase 1 static dashboard for privacy-first personal admin.
 
 - HTML, CSS and vanilla JavaScript only.
 - Browser-only: admin dashboard data uses `localStorage`; the Clinical Note
-  Formatter uses page memory only.
+  Formatter and Letter + PDF Packer use page memory only.
 - No client data.
 - No credentials.
 - No real email addresses.
 - No calendar, email or practice-management integrations.
 - Clinical note formatting is local, temporary preparation only. It does not log
   in, call APIs, automate record entry, or write to Feelgood or Awarely.
+- Letter + PDF Packer is TEST/DRAFT only. It does not auto-send, generate email
+  recipients, upload files, attach PDFs, write client data to Google Sheets, or
+  integrate with any practice system.
 - Any future integration requires practice approval before connection.
 
 ## Features
@@ -46,6 +49,14 @@ Standalone Phase 1 static dashboard for privacy-first personal admin.
   - optional non-identifying session details
   - editable generated preview
   - copy formatted note and clear all controls
+- DOM-only Letter + PDF Packer (Draft) with:
+  - recipient/client name, matter/reference and letter-purpose fields
+  - placeholder-only template selector until approved templates are supplied
+  - supporting materials picker from approved material metadata when available,
+    with temporary dummy/test fallback
+  - editable generated draft package preview
+  - local text-package download and browser print / Save as PDF support
+  - clear control and explicit TEST/DRAFT approval notes
 
 ## Run Locally
 
@@ -77,6 +88,17 @@ The Clinical Note Formatter is not stored under `sueAdminDashboard:v1`. Its
 input and generated preview live only in the current page DOM while the page is
 open. The formatter is excluded from localStorage, demo data, imports, exports
 and JSON backups.
+
+The Letter + PDF Packer is also excluded from `sueAdminDashboard:v1`. Recipient,
+matter/reference, purpose, template selection and draft preview values live only
+in the current page DOM. The generated package can be downloaded as a local text
+file or printed through the browser, but the app does not generate attachments,
+upload files, address email, send email, write client data to the Google Sheet,
+or connect to a practice-management system.
+
+Before any real use, Sue still needs approved letter template wording,
+letterhead/header/footer assets, sign-off wording, document naming rules and a
+confirmed PDF/attachment bundling process.
 
 The Personal Health tracker is stored under its own dedicated key:
 
