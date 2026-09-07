@@ -269,6 +269,11 @@ function normaliseTaskStatus(status) {
   return TASK_STATUSES.includes(status) ? status : "Open";
 }
 
+function taskStatusForSheetWrite(status) {
+  const internalStatus = normaliseTaskStatus(status);
+  return internalStatus === "Waiting" ? "In progress" : internalStatus;
+}
+
 function taskStatusPill(item) {
   const label = normaliseTaskStatus(item.status);
   return {
@@ -496,7 +501,7 @@ function taskActions(item) {
         const match = isSheetTask(item) ? /^sheet-task-(\d+)$/.exec(String(item.id || "")) : null;
         if (match) {
           try {
-            await sheetWrite("updateTaskStatus", { rowNumber: Number(match[1]), status: nextStatus });
+            await sheetWrite("updateTaskStatus", { rowNumber: Number(match[1]), status: taskStatusForSheetWrite(nextStatus) });
             setApiStatus("Saved to Google Sheet.", "success");
             return;
           } catch (err) {
@@ -1076,7 +1081,7 @@ async function moveKanbanTask(taskId, fromStatus, toStatus, card) {
   if (match) {
     setKanbanStatus(`Saving “${displayTaskTitle(task) || "task"}” → ${label}…`, "info");
     try {
-      await sheetWrite("updateTaskStatus", { rowNumber: Number(match[1]), status: nextStatus });
+      await sheetWrite("updateTaskStatus", { rowNumber: Number(match[1]), status: taskStatusForSheetWrite(nextStatus) });
       setKanbanStatus(`Saved “${displayTaskTitle(task) || "task"}” as ${label}.`, "success");
       setApiStatus("Saved to Google Sheet.", "success");
     } catch (err) {
