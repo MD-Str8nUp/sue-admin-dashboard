@@ -877,19 +877,41 @@ document.addEventListener("click", (ev) => {
   if (!ev.target.closest(".kanban-card__controls")) closeAllKanbanMenus();
 });
 
+function clearKanbanDropHighlights() {
+  document.querySelectorAll(".kanban-col__list--drop").forEach((el) => el.classList.remove("kanban-col__list--drop"));
+  document.querySelectorAll(".kanban-col--drop").forEach((el) => el.classList.remove("kanban-col--drop"));
+}
+
+function setKanbanDropHighlight(listEl) {
+  clearKanbanDropHighlights();
+  if (!listEl) return;
+  listEl.classList.add("kanban-col__list--drop");
+  const column = listEl.closest(".kanban-col");
+  if (column) column.classList.add("kanban-col--drop");
+}
+
+function kanbanDropListFromPoint(clientX, clientY) {
+  const under = document.elementFromPoint(clientX, clientY);
+  if (!under || !(under instanceof Element)) return null;
+  const list = under.closest(".kanban-col__list");
+  if (list) return list;
+  const column = under.closest(".kanban-col");
+  return column ? column.querySelector(".kanban-col__list") : null;
+}
+
 function wireKanbanDropTarget(listEl) {
   listEl.addEventListener("dragover", (ev) => {
     if (kanbanBusy) return;
     ev.preventDefault();
     ev.dataTransfer.dropEffect = "move";
-    listEl.classList.add("kanban-col__list--drop");
+    setKanbanDropHighlight(listEl);
   });
   listEl.addEventListener("dragleave", (ev) => {
-    if (ev.target === listEl) listEl.classList.remove("kanban-col__list--drop");
+    if (ev.target === listEl) clearKanbanDropHighlights();
   });
   listEl.addEventListener("drop", (ev) => {
     ev.preventDefault();
-    listEl.classList.remove("kanban-col__list--drop");
+    clearKanbanDropHighlights();
     if (kanbanBusy) return;
     const taskId = ev.dataTransfer.getData("text/plain");
     const target = listEl.dataset.targetStatus;
@@ -910,14 +932,16 @@ function wireKanbanCardDrag(card, currentStatus) {
   });
   card.addEventListener("dragend", () => {
     card.classList.remove("kanban-card--dragging");
-    document.querySelectorAll(".kanban-col__list--drop").forEach((el) => el.classList.remove("kanban-col__list--drop"));
+    clearKanbanDropHighlights();
   });
 
   let pointerState = null;
   card.addEventListener("pointerdown", (ev) => {
     if (ev.pointerType === "mouse") return;
-    if (ev.target instanceof Element && ev.target.closest(".kanban-card__controls")) return;
+    if (ev.target instanceof Element && ev.target.closest(".kanban-card__controls, button, a, input, select, textarea, summary")) return;
     if (kanbanBusy) return;
+    closeAllKanbanMenus();
+    try { card.setPointerCapture(ev.pointerId); } catch (_) {}
     pointerState = {
       id: ev.pointerId,
       startX: ev.clientX,
@@ -934,7 +958,6 @@ function wireKanbanCardDrag(card, currentStatus) {
     if (!pointerState.active) {
       if (Math.hypot(dx, dy) < 8) return;
       pointerState.active = true;
-      try { card.setPointerCapture(ev.pointerId); } catch (_) {}
       const rect = card.getBoundingClientRect();
       const ghost = card.cloneNode(true);
       ghost.classList.add("kanban-card--ghost");
@@ -954,13 +977,9 @@ function wireKanbanCardDrag(card, currentStatus) {
     ev.preventDefault();
     pointerState.ghost.style.transform = `translate(${ev.clientX - pointerState.startX}px, ${ev.clientY - pointerState.startY}px)`;
     pointerState.ghost.style.display = "none";
-    const under = document.elementFromPoint(ev.clientX, ev.clientY);
+    const dropList = kanbanDropListFromPoint(ev.clientX, ev.clientY);
     pointerState.ghost.style.display = "";
-    const dropList = under ? under.closest(".kanban-col__list") : null;
-    if (pointerState.lastDrop && pointerState.lastDrop !== dropList) {
-      pointerState.lastDrop.classList.remove("kanban-col__list--drop");
-    }
-    if (dropList) dropList.classList.add("kanban-col__list--drop");
+    if (pointerState.lastDrop !== dropList) setKanbanDropHighlight(dropList);
     pointerState.lastDrop = dropList;
   });
   const endPointer = (ev) => {
@@ -970,7 +989,8 @@ function wireKanbanCardDrag(card, currentStatus) {
     card.classList.remove("kanban-card--dragging");
     document.body.classList.remove("kanban-dragging");
     if (state.ghost) state.ghost.remove();
-    if (state.lastDrop) state.lastDrop.classList.remove("kanban-col__list--drop");
+    clearKanbanDropHighlights();
+    try { card.releasePointerCapture(ev.pointerId); } catch (_) {}
     if (!state.active) return;
     const target = state.lastDrop ? state.lastDrop.dataset.targetStatus : null;
     if (!target || target === currentStatus) return;

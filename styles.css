@@ -290,6 +290,7 @@ h2 {
   gap: 10px;
   margin: 10px 0 18px;
   min-width: 0;
+  max-width: 100%;
 }
 .kanban-col {
   display: flex;
@@ -408,6 +409,11 @@ h2 {
 .kanban-card--ghost { opacity: .9; box-shadow: 0 10px 24px rgba(0,0,0,.18); pointer-events: none; }
 .kanban-card--saving { outline: 2px dashed var(--navy-soft); outline-offset: 2px; }
 .kanban-col__list { min-height: 44px; padding: 4px; border-radius: var(--radius); transition: background-color .12s ease, outline-color .12s ease; }
+.kanban-col--drop {
+  background: #eaf3ff;
+  border-color: #6f91bb;
+  box-shadow: inset 0 0 0 2px rgba(36, 64, 95, .2);
+}
 .kanban-col__list--drop { background: #eaf3ff; outline: 2px dashed var(--navy-soft); }
 .kanban-col__list--drop::after {
   content: "Drop here";
@@ -477,16 +483,21 @@ body.kanban-dragging { user-select: none; -webkit-user-select: none; }
   .progress-history__item { padding: 9px; }
   .progress-kanban {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(168px, 1fr));
     gap: 8px;
-    overflow: visible;
-    padding-bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    padding-bottom: 8px;
     margin-inline: 0;
     padding-inline: 0;
   }
   .kanban-col {
-    width: 100%;
-    max-width: 100%;
+    min-width: 168px;
   }
   .kanban-col__list { min-height: 82px; }
   .kanban-card:not(.kanban-card--empty) { touch-action: none; }
