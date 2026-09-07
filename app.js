@@ -936,61 +936,119 @@ function wireKanbanCardDrag(card, currentStatus) {
   });
 
   let pointerState = null;
+  let pressTimer = null;
+  const board = document.getElementById("progress-kanban");
+
+  function scheduleAutoScroll() {
+    if (!board || !pointerState || pointerState.autoScrollRAF) return;
+    const tick = () => {
+      if (!pointerState || !pointerState.active) return;
+      pointerState.autoScrollRAF = null;
+      const brect = board.getBoundingClientRect();
+      const edge = 60;
+      let delta = 0;
+      if (pointerState.lastX < brect.left + edge) delta = -14;
+      else if (pointerState.lastX > brect.right - edge) delta = 14;
+      if (delta && board.scrollWidth > board.clientWidth + 1) {
+        const before = board.scrollLeft;
+        board.scrollLeft = Math.max(0, Math.min(board.scrollWidth - board.clientWidth, before + delta));
+        if (board.scrollLeft !== before && pointerState.ghost) {
+          pointerState.ghost.style.visibility = "hidden";
+          const dropList = kanbanDropListFromPoint(pointerState.lastX, pointerState.lastY);
+          pointerState.ghost.style.visibility = "";
+          if (pointerState.lastDrop !== dropList) setKanbanDropHighlight(dropList);
+          pointerState.lastDrop = dropList;
+        }
+        pointerState.autoScrollRAF = requestAnimationFrame(tick);
+      }
+    };
+    pointerState.autoScrollRAF = requestAnimationFrame(tick);
+  }
+
+  function activateDrag() {
+    if (!pointerState || pointerState.active) return;
+    const rect = card.getBoundingClientRect();
+    const ghost = card.cloneNode(true);
+    ghost.classList.add("kanban-card--ghost");
+    ghost.style.position = "fixed";
+    ghost.style.left = `${rect.left}px`;
+    ghost.style.top = `${rect.top}px`;
+    ghost.style.width = `${rect.width}px`;
+    ghost.style.margin = "0";
+    ghost.style.pointerEvents = "none";
+    ghost.style.zIndex = "9999";
+    ghost.style.transform = `translate(${pointerState.lastX - pointerState.startX}px, ${pointerState.lastY - pointerState.startY}px)`;
+    document.body.append(ghost);
+    pointerState.ghost = ghost;
+    pointerState.active = true;
+    card.classList.add("kanban-card--dragging");
+    document.body.classList.add("kanban-dragging");
+    card.style.touchAction = "none";
+    try { card.setPointerCapture(pointerState.id); } catch (_) {}
+    ghost.style.visibility = "hidden";
+    const dropList = kanbanDropListFromPoint(pointerState.lastX, pointerState.lastY);
+    ghost.style.visibility = "";
+    setKanbanDropHighlight(dropList);
+    pointerState.lastDrop = dropList;
+    if (navigator.vibrate) { try { navigator.vibrate(15); } catch (_) {} }
+  }
+
   card.addEventListener("pointerdown", (ev) => {
     if (ev.pointerType === "mouse") return;
     if (ev.target instanceof Element && ev.target.closest(".kanban-card__controls, button, a, input, select, textarea, summary")) return;
     if (kanbanBusy) return;
     closeAllKanbanMenus();
-    try { card.setPointerCapture(ev.pointerId); } catch (_) {}
     pointerState = {
       id: ev.pointerId,
       startX: ev.clientX,
       startY: ev.clientY,
+      lastX: ev.clientX,
+      lastY: ev.clientY,
       active: false,
       ghost: null,
-      lastDrop: null
+      lastDrop: null,
+      autoScrollRAF: null
     };
+    if (pressTimer) clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => {
+      pressTimer = null;
+      if (pointerState && !pointerState.active) activateDrag();
+    }, 320);
   });
   card.addEventListener("pointermove", (ev) => {
     if (!pointerState || pointerState.id !== ev.pointerId) return;
-    const dx = ev.clientX - pointerState.startX;
-    const dy = ev.clientY - pointerState.startY;
+    pointerState.lastX = ev.clientX;
+    pointerState.lastY = ev.clientY;
     if (!pointerState.active) {
-      if (Math.hypot(dx, dy) < 8) return;
-      pointerState.active = true;
-      const rect = card.getBoundingClientRect();
-      const ghost = card.cloneNode(true);
-      ghost.classList.add("kanban-card--ghost");
-      ghost.style.position = "fixed";
-      ghost.style.left = `${rect.left}px`;
-      ghost.style.top = `${rect.top}px`;
-      ghost.style.width = `${rect.width}px`;
-      ghost.style.pointerEvents = "none";
-      ghost.style.zIndex = "9999";
-      document.body.append(ghost);
-      pointerState.ghost = ghost;
-      pointerState.offsetX = ev.clientX - rect.left;
-      pointerState.offsetY = ev.clientY - rect.top;
-      card.classList.add("kanban-card--dragging");
-      document.body.classList.add("kanban-dragging");
+      const dx = ev.clientX - pointerState.startX;
+      const dy = ev.clientY - pointerState.startY;
+      if (Math.hypot(dx, dy) > 10) {
+        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+        pointerState = null;
+      }
+      return;
     }
     ev.preventDefault();
     pointerState.ghost.style.transform = `translate(${ev.clientX - pointerState.startX}px, ${ev.clientY - pointerState.startY}px)`;
-    pointerState.ghost.style.display = "none";
+    pointerState.ghost.style.visibility = "hidden";
     const dropList = kanbanDropListFromPoint(ev.clientX, ev.clientY);
-    pointerState.ghost.style.display = "";
+    pointerState.ghost.style.visibility = "";
     if (pointerState.lastDrop !== dropList) setKanbanDropHighlight(dropList);
     pointerState.lastDrop = dropList;
+    scheduleAutoScroll();
   });
   const endPointer = (ev) => {
     if (!pointerState || pointerState.id !== ev.pointerId) return;
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
     const state = pointerState;
     pointerState = null;
+    if (state.autoScrollRAF) cancelAnimationFrame(state.autoScrollRAF);
+    card.style.touchAction = "";
     card.classList.remove("kanban-card--dragging");
     document.body.classList.remove("kanban-dragging");
     if (state.ghost) state.ghost.remove();
     clearKanbanDropHighlights();
-    try { card.releasePointerCapture(ev.pointerId); } catch (_) {}
+    try { card.releasePointerCapture(state.id); } catch (_) {}
     if (!state.active) return;
     const target = state.lastDrop ? state.lastDrop.dataset.targetStatus : null;
     if (!target || target === currentStatus) return;
