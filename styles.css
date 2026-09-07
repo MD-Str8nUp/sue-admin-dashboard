@@ -1817,3 +1817,141 @@ textarea:focus {
 @media (max-width: 560px) {
   .workflow4__placeholders .actions .button { width: 100%; }
 }
+
+/* -------- Workflow 5: personal admin + progress guide -------- */
+.workflow5__categories {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px dashed var(--line-soft);
+  border-radius: 8px;
+  background: #fafafa;
+}
+.workflow5__categories legend { padding: 0 6px; font-weight: 600; }
+.workflow5__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.workflow5__chip {
+  appearance: none;
+  border: 1px solid var(--line-soft);
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  min-height: 40px;
+  line-height: 1.2;
+}
+.workflow5__chip:hover { border-color: #999; }
+.workflow5__chip.is-active {
+  background: #1f3b73;
+  color: #fff;
+  border-color: #1f3b73;
+}
+.workflow5__chip:focus-visible {
+  outline: 2px solid #1f3b73;
+  outline-offset: 2px;
+}
+.workflow5__subtitle {
+  font-size: 1rem;
+  margin: 18px 0 8px;
+}
+.workflow5__explainer .workflow5__glossary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.workflow5__glossary > div {
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fff;
+}
+.workflow5__glossary dt {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.workflow5__glossary dd {
+  margin: 0;
+  font-size: 0.92rem;
+}
+.workflow5__capture {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fff;
+}
+.workflow5__capture-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.workflow5__capture-head .workflow5__subtitle { margin: 0; }
+.workflow5__pill {
+  font-size: 0.8rem;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #eef2f9;
+  color: #1f3b73;
+  border: 1px solid #d0dbee;
+}
+.workflow5__hint {
+  margin: 6px 0 8px;
+  font-size: 0.9rem;
+  color: #555;
+}
+.workflow5__phrase {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  background: #fafafa;
+  resize: vertical;
+}
+.workflow5__actions { flex-wrap: wrap; margin-top: 8px; }
+.workflow5__checklist-wrap { margin-top: 10px; }
+.workflow5__checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.workflow5__checklist li {
+  padding: 8px 10px 8px 30px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fff;
+  position: relative;
+  font-size: 0.92rem;
+}
+.workflow5__checklist li::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 12px;
+  width: 12px;
+  height: 12px;
+  border: 1px solid #888;
+  border-radius: 3px;
+  background: #fff;
+}
+.workflow5__shortcuts { margin-top: 14px; }
+.workflow5__shortcut-buttons { flex-wrap: wrap; }
+.workflow5__pending { margin-top: 14px; }
+.workflow5__pending ul { margin: 6px 0 0 20px; padding: 0; }
+.workflow5__pending li { margin: 3px 0; }
+@media (max-width: 560px) {
+  .workflow5__chip { flex: 1 1 auto; text-align: center; }
+  .workflow5__shortcut-buttons .button,
+  .workflow5__actions .button { width: 100%; }
+}

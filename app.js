@@ -1821,6 +1821,204 @@ function setupWorkflow4() {
   });
 }
 
+const WORKFLOW5_CATEGORIES = [
+  {
+    id: "cpd",
+    label: "CPD",
+    activeLabel: "CPD activity",
+    phrase: "Log CPD activity [topic] — [X] units by 31 March 2026; remind me fourteen days before.",
+    checklist: [
+      "Activity name and CPD category (e.g. substantive law, ethics)",
+      "Units or hours claimed and evidence held (certificate, notes)",
+      "CPD year end date as the deadline",
+      "Reminder lead time long enough to complete a make-up activity if needed"
+    ]
+  },
+  {
+    id: "certificate",
+    label: "Practising certificate",
+    activeLabel: "Practising certificate renewal",
+    phrase: "Renew practising certificate by 30 June 2026; remind me fourteen days before.",
+    checklist: [
+      "Certificate holder name and certificate number reference (personal note)",
+      "Renewal window open and close dates",
+      "Fee amount and payment method to prepare",
+      "Supporting declarations (CPD, insurance, fit-and-proper) already in place",
+      "Reminder lead time to cover payment clearance"
+    ]
+  },
+  {
+    id: "registration",
+    label: "Registration",
+    activeLabel: "Registration renewal",
+    phrase: "Renew registration with [body] by [date]; remind me seven days before.",
+    checklist: [
+      "Registering body (Law Society, ABN, business name, etc.)",
+      "Renewal reference or member number (personal note)",
+      "Deadline date and any grace period",
+      "Documents or attestations required at renewal",
+      "Reminder lead time appropriate for the body"
+    ]
+  },
+  {
+    id: "fines",
+    label: "Fines",
+    activeLabel: "Fine or penalty",
+    phrase: "Pay fine [reference] by [date]; remind me two days before.",
+    checklist: [
+      "Fine reference number (personal note only)",
+      "Amount and pay-by date",
+      "Payment channel (BPAY, portal, direct debit)",
+      "Whether to review or dispute before paying",
+      "Short reminder lead time — fines are usually fixed date"
+    ]
+  },
+  {
+    id: "travel",
+    label: "Travel / admin",
+    activeLabel: "Travel and general admin",
+    phrase: "Prepare travel admin for [trip] by [date]; remind me five days before.",
+    checklist: [
+      "Trip or admin task summary (destination, purpose)",
+      "Key date (departure, submission, expiry)",
+      "Bookings or forms outstanding (flights, accommodation, forms)",
+      "Documents to carry or upload",
+      "Reminder lead time for bookings and packing"
+    ]
+  }
+];
+
+function setupWorkflow5() {
+  const panel = document.getElementById("workflow5-panel");
+  if (!panel) return;
+
+  const chipsHost = document.getElementById("wf5-category-chips");
+  const activeLabel = document.getElementById("wf5-active-label");
+  const phraseEl = document.getElementById("wf5-phrase");
+  const checklistEl = document.getElementById("wf5-checklist");
+  const statusEl = document.getElementById("wf5-status");
+  const copyBtn = document.getElementById("wf5-copy-phrase");
+  const focusCaptureBtn = document.getElementById("wf5-focus-capture");
+  const goCapture = document.getElementById("wf5-go-capture");
+  const goWeek = document.getElementById("wf5-go-week");
+  const goDeadlines = document.getElementById("wf5-go-deadlines");
+  const goProgress = document.getElementById("wf5-go-progress");
+  const goHealth = document.getElementById("wf5-go-health");
+
+  let activeId = WORKFLOW5_CATEGORIES[0].id;
+
+  function setStatus(message, tone) {
+    if (!statusEl) return;
+    statusEl.textContent = message || "";
+    statusEl.classList.remove("import-status--success", "import-status--error", "import-status--info");
+    if (tone === "success") statusEl.classList.add("import-status--success");
+    else if (tone === "error") statusEl.classList.add("import-status--error");
+    else statusEl.classList.add("import-status--info");
+  }
+
+  function renderChips() {
+    chipsHost.innerHTML = "";
+    WORKFLOW5_CATEGORIES.forEach((cat) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "workflow5__chip" + (cat.id === activeId ? " is-active" : "");
+      btn.setAttribute("role", "radio");
+      btn.setAttribute("aria-checked", String(cat.id === activeId));
+      btn.dataset.categoryId = cat.id;
+      btn.textContent = cat.label;
+      btn.addEventListener("click", () => selectCategory(cat.id));
+      chipsHost.append(btn);
+    });
+  }
+
+  function renderActive() {
+    const cat = WORKFLOW5_CATEGORIES.find((c) => c.id === activeId) || WORKFLOW5_CATEGORIES[0];
+    activeLabel.textContent = cat.activeLabel;
+    phraseEl.value = cat.phrase;
+    checklistEl.innerHTML = "";
+    cat.checklist.forEach((text) => {
+      const li = document.createElement("li");
+      li.textContent = text;
+      checklistEl.append(li);
+    });
+  }
+
+  function selectCategory(id) {
+    if (!WORKFLOW5_CATEGORIES.some((c) => c.id === id)) return;
+    activeId = id;
+    renderChips();
+    renderActive();
+    setStatus("Category updated in this page only.", "info");
+  }
+
+  function activateTab(tabId) {
+    const tab = document.getElementById(tabId);
+    if (tab) tab.click();
+  }
+
+  function scrollTo(selector, focusSelector) {
+    const el = document.querySelector(selector);
+    if (!el) return;
+    if (typeof el.open === "boolean") el.open = true;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (focusSelector) {
+      const target = document.querySelector(focusSelector);
+      if (target) {
+        window.setTimeout(() => {
+          try { target.focus({ preventScroll: true }); } catch { target.focus(); }
+        }, 300);
+      }
+    }
+  }
+
+  renderChips();
+  renderActive();
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(phraseEl.value);
+      setStatus("Phrase copied. Paste into Quick Capture and adjust dates as needed.", "success");
+    } catch {
+      phraseEl.focus();
+      phraseEl.select();
+      setStatus("Copy unavailable. Phrase is selected so you can copy it manually.", "error");
+    }
+  });
+
+  function goToCapture() {
+    activateTab("work-tab");
+    scrollTo("#work-panel .quick-capture-panel", "#capture-text");
+    setStatus("Quick Capture focused. Paste the phrase and save the task there.", "info");
+  }
+
+  focusCaptureBtn.addEventListener("click", goToCapture);
+  goCapture.addEventListener("click", goToCapture);
+
+  goWeek.addEventListener("click", () => {
+    activateTab("work-tab");
+    scrollTo("#week-title");
+    setStatus("Jumped to This week. Tasks appear here once saved via Quick Capture.", "info");
+  });
+
+  goDeadlines.addEventListener("click", () => {
+    activateTab("work-tab");
+    scrollTo("#deadlines-title");
+    setStatus("Jumped to Upcoming deadlines.", "info");
+  });
+
+  goProgress.addEventListener("click", () => {
+    activateTab("progress-tab");
+    scrollTo("#progress-panel");
+    setStatus("Progress view opened. The Kanban shows tasks as they move.", "info");
+  });
+
+  goHealth.addEventListener("click", () => {
+    activateTab("health-tab");
+    scrollTo("#health-panel");
+    setStatus("Health view opened. Personal admin does not write here.", "info");
+  });
+}
+
 function setupForms() {
   const captureText = document.getElementById("capture-text");
   const captureDue = document.getElementById("capture-due");
@@ -2338,6 +2536,7 @@ setupEmailDraft();
 setupLetterPacker();
 setupWorkflow3();
 setupWorkflow4();
+setupWorkflow5();
 setupForms();
 setupPersonalHealth();
 setupDashboardTabs();
