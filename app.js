@@ -1570,6 +1570,257 @@ function setupWorkflow3() {
   });
 }
 
+const WORKFLOW4_DEFAULT_STEPS = [
+  "Confirm matter reference against approved source before use",
+  "Draft next action and check any approvals required",
+  "Identify approved supporting resources",
+  "Note manual follow-up (email/file/appointment) to complete in approved systems"
+];
+
+const workflow4SelectedResources = new Set();
+
+function setWorkflow4Status(message, type = "info") {
+  const status = document.getElementById("wf4-status");
+  if (!status) return;
+  status.textContent = message;
+  status.className = `import-status import-status--${type}`;
+}
+
+function renderWorkflow4Checklist(items) {
+  const box = document.getElementById("wf4-checklist");
+  if (!box) return;
+  box.innerHTML = "";
+  items.forEach((text, index) => {
+    const row = document.createElement("label");
+    row.className = "materials-box__row";
+    row.setAttribute("role", "listitem");
+
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.setAttribute("aria-label", `Mark next step ${index + 1} complete`);
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = text;
+    input.maxLength = 200;
+    input.autocomplete = "off";
+    input.className = "materials-box__label";
+    input.setAttribute("aria-label", `Next step ${index + 1}`);
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "button button--ghost button--small";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => row.remove());
+
+    row.append(check, input, remove);
+    box.append(row);
+  });
+}
+
+function collectWorkflow4Checklist() {
+  const box = document.getElementById("wf4-checklist");
+  if (!box) return [];
+  return Array.from(box.querySelectorAll(".materials-box__row")).map((row) => {
+    const check = row.querySelector('input[type="checkbox"]');
+    const label = row.querySelector(".materials-box__label");
+    return { text: label ? label.value.trim() : "", done: Boolean(check && check.checked) };
+  }).filter((item) => item.text);
+}
+
+function workflow4ResourceKey(item) {
+  return `${item.name}||${item.reference || ""}`;
+}
+
+function renderWorkflow4Results() {
+  const results = document.getElementById("wf4-results");
+  const hint = document.getElementById("wf4-finder-hint");
+  const search = document.getElementById("wf4-search");
+  if (!results || !search) return;
+
+  const approved = materialSourceIsApproved();
+  if (hint) {
+    hint.textContent = approved
+      ? "Filters only the approved-material metadata already loaded for the dashboard."
+      : "Approved materials not loaded — searching temporary test materials only (labelled TEST ONLY).";
+  }
+
+  const query = search.value.trim().toLowerCase();
+  results.innerHTML = "";
+  const matches = testMaterials.filter((item) => {
+    if (!query) return true;
+    const hay = `${item.name} ${item.reference || ""}`.toLowerCase();
+    return hay.includes(query);
+  });
+
+  if (!matches.length) {
+    const empty = document.createElement("p");
+    empty.className = "field__hint";
+    empty.textContent = "No matching resources.";
+    results.append(empty);
+    return;
+  }
+
+  matches.forEach((item) => {
+    const key = workflow4ResourceKey(item);
+    const row = document.createElement("label");
+    row.className = "material-item";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = workflow4SelectedResources.has(key);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) workflow4SelectedResources.add(key);
+      else workflow4SelectedResources.delete(key);
+      renderWorkflow4Selected();
+    });
+    const text = document.createElement("span");
+    text.className = "material-text";
+    const name = document.createElement("span");
+    name.className = "material-name";
+    const suffix = item.dummy ? "" : (approved ? "" : "");
+    name.textContent = item.name + suffix;
+    text.append(name);
+    if (item.reference) {
+      const ref = document.createElement("span");
+      ref.className = "material-reference";
+      ref.textContent = `Reference: ${item.reference}`;
+      text.append(ref);
+    }
+    if (!approved) {
+      const tag = document.createElement("span");
+      tag.className = "material-reference";
+      tag.textContent = "Temporary test material";
+      text.append(tag);
+    }
+    row.append(checkbox, text);
+    results.append(row);
+  });
+}
+
+function renderWorkflow4Selected() {
+  const list = document.getElementById("wf4-selected");
+  if (!list) return;
+  list.innerHTML = "";
+  const selected = testMaterials.filter((item) => workflow4SelectedResources.has(workflow4ResourceKey(item)));
+  if (!selected.length) {
+    const empty = document.createElement("li");
+    empty.className = "field__hint";
+    empty.textContent = "No resources selected.";
+    list.append(empty);
+    return;
+  }
+  selected.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = "item";
+    const label = document.createElement("strong");
+    label.textContent = item.name;
+    li.append(label);
+    if (item.reference) {
+      const meta = document.createElement("span");
+      meta.className = "item__meta";
+      meta.textContent = `Reference: ${item.reference}`;
+      li.append(meta);
+    }
+    list.append(li);
+  });
+}
+
+function workflow4SummaryText() {
+  const matter = document.getElementById("wf4-matter").value.trim() || "[matter/reference — draft only]";
+  const context = document.getElementById("wf4-context").value.trim() || "[short context — draft only]";
+  const steps = collectWorkflow4Checklist();
+  const selected = testMaterials.filter((item) => workflow4SelectedResources.has(workflow4ResourceKey(item)));
+  const approved = materialSourceIsApproved();
+
+  const lines = [
+    "DRAFT MATTER HUB SUMMARY — not saved, not sent, not linked to any practice system.",
+    "",
+    `Matter / reference: ${matter}`,
+    `Context: ${context}`,
+    "",
+    "Next steps:"
+  ];
+  if (!steps.length) lines.push("  - (no steps entered)");
+  else steps.forEach((s) => lines.push(`  - [${s.done ? "x" : " "}] ${s.text}`));
+
+  lines.push("", `Selected resources (${approved ? "approved metadata" : "temporary test materials"}):`);
+  if (!selected.length) lines.push("  - (none selected)");
+  else selected.forEach((item) => {
+    const ref = item.reference ? ` — ${item.reference}` : "";
+    lines.push(`  - ${item.name}${ref}`);
+  });
+
+  lines.push(
+    "",
+    "Reminders:",
+    "- No practice-system record, email, files, or appointment has been opened.",
+    "- No client/matter data has been written to the Sheet or localStorage.",
+    "- Approved system URLs and integration are still required before the placeholder buttons can be enabled."
+  );
+  return lines.join("\n");
+}
+
+function setupWorkflow4() {
+  const form = document.getElementById("workflow4-form");
+  if (!form) return;
+  const summary = document.getElementById("wf4-summary");
+
+  renderWorkflow4Checklist(WORKFLOW4_DEFAULT_STEPS);
+  renderWorkflow4Results();
+  renderWorkflow4Selected();
+
+  form.addEventListener("submit", (event) => event.preventDefault());
+
+  document.getElementById("wf4-add-check").addEventListener("click", () => {
+    const input = document.getElementById("wf4-new-check");
+    const value = input.value.trim();
+    if (!value) return;
+    const current = collectWorkflow4Checklist().map((s) => s.text);
+    current.push(value);
+    renderWorkflow4Checklist(current);
+    input.value = "";
+    setWorkflow4Status("Next-step item added to this page only.", "success");
+  });
+
+  document.getElementById("wf4-search").addEventListener("input", renderWorkflow4Results);
+
+  document.getElementById("wf4-generate").addEventListener("click", () => {
+    summary.value = workflow4SummaryText();
+    setWorkflow4Status("Draft summary generated in this page only. Nothing sent, saved, or linked.", "success");
+  });
+
+  document.getElementById("wf4-copy").addEventListener("click", async () => {
+    if (!summary.value.trim()) summary.value = workflow4SummaryText();
+    try {
+      await navigator.clipboard.writeText(summary.value);
+      setWorkflow4Status("Draft summary copied to clipboard.", "success");
+    } catch {
+      summary.focus();
+      summary.select();
+      setWorkflow4Status("Copy unavailable. Draft is selected so you can copy it manually.", "error");
+    }
+  });
+
+  document.getElementById("wf4-clear").addEventListener("click", () => {
+    form.reset();
+    summary.value = "";
+    workflow4SelectedResources.clear();
+    renderWorkflow4Checklist(WORKFLOW4_DEFAULT_STEPS);
+    renderWorkflow4Results();
+    renderWorkflow4Selected();
+    setWorkflow4Status("Form cleared from this page.", "info");
+  });
+
+  ["wf4-open-record", "wf4-open-email", "wf4-open-files", "wf4-open-appointment"].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener("click", (event) => {
+      event.preventDefault();
+      setWorkflow4Status("Placeholder button — approved practice-system URL/integration is still required.", "info");
+    });
+  });
+}
+
 function setupForms() {
   const captureText = document.getElementById("capture-text");
   const captureDue = document.getElementById("capture-due");
@@ -2086,6 +2337,7 @@ setupClinicalNoteFormatter();
 setupEmailDraft();
 setupLetterPacker();
 setupWorkflow3();
+setupWorkflow4();
 setupForms();
 setupPersonalHealth();
 setupDashboardTabs();
@@ -2344,6 +2596,9 @@ async function hydrateFromSheetApi() {
       backendMaterialsSource = "dummy";
     }
     renderMaterialsChecklist();
+    workflow4SelectedResources.clear();
+    renderWorkflow4Results();
+    renderWorkflow4Selected();
   } else {
     failures.push(`materials (${materials.reason && materials.reason.message})`);
   }

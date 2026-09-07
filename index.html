@@ -510,6 +510,107 @@
           </form>
         </div>
       </details>
+
+      <details class="panel collapsible-panel workflow4-panel" id="workflow4-panel" aria-labelledby="workflow4-title">
+        <summary class="collapsible-panel__summary">
+          <span><strong id="workflow4-title">Workflow 4 — Matter Hub + Resource Finder (Draft)</strong><small>Prepare a matter-context draft in the browser only</small></span>
+          <span class="collapsible-panel__state" aria-hidden="true"></span>
+        </summary>
+        <div class="collapsible-panel__body">
+          <div class="panel__header panel__header--split">
+            <div>
+              <p class="section-hint">Page-memory-only preparation. No practice-system login, no client/matter details are written to the Sheet, localStorage, email, files, or calendar.</p>
+            </div>
+            <span class="save-state">DOM-only</span>
+          </div>
+
+          <div class="notice-panel notice-panel--clinical" role="note" aria-labelledby="workflow4-privacy-title">
+            <div class="notice-panel__summary">
+              <span class="notice-panel__badge" aria-hidden="true">i</span>
+              <h3 id="workflow4-privacy-title" class="notice-panel__title">Draft-only matter hub</h3>
+            </div>
+            <div class="notice-panel__body">
+              <p>Fields on this form are held only in this page while it is open. Nothing is written to the Sheet, localStorage, email, files, or calendar. Refreshing the page clears everything.</p>
+              <p><strong>No practice system is linked.</strong> The buttons below cannot open a practice record, matter email, matter files, or an appointment — approved system URLs and integration are still required.</p>
+            </div>
+          </div>
+
+          <form class="form workflow4__form" id="workflow4-form">
+            <div class="form__row">
+              <label class="field">
+                <span class="field__label">Matter / reference display (draft only)</span>
+                <input id="wf4-matter" type="text" maxlength="120" autocomplete="off" placeholder="Display label for this draft (not saved)">
+              </label>
+              <label class="field">
+                <span class="field__label">Short context note (draft only)</span>
+                <input id="wf4-context" type="text" maxlength="160" autocomplete="off" placeholder="One-line context for the draft (not saved)">
+              </label>
+            </div>
+
+            <div class="field">
+              <span class="field__label" id="wf4-checklist-label">Next-step checklist (editable)</span>
+              <div class="materials-box" id="wf4-checklist" role="list" aria-labelledby="wf4-checklist-label"></div>
+              <div class="inline-add">
+                <label class="sr-only" for="wf4-new-check">Add next-step item</label>
+                <input id="wf4-new-check" type="text" maxlength="140" autocomplete="off" placeholder="Add next-step item">
+                <button class="button button--ghost" id="wf4-add-check" type="button">Add step</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <span class="field__label" id="wf4-finder-label">Resource finder</span>
+              <small class="field__hint" id="wf4-finder-hint">Filters only the approved-material metadata already loaded for the dashboard.</small>
+              <label class="sr-only" for="wf4-search">Search approved materials</label>
+              <input id="wf4-search" type="search" maxlength="120" autocomplete="off" placeholder="Search approved materials by name or reference">
+              <div class="materials-box" id="wf4-results" role="list" aria-labelledby="wf4-finder-label"></div>
+            </div>
+
+            <div class="field">
+              <span class="field__label" id="wf4-selected-label">Selected resources</span>
+              <ul class="list" id="wf4-selected" aria-labelledby="wf4-selected-label"></ul>
+            </div>
+
+            <label class="field">
+              <span class="field__label">Copyable draft summary</span>
+              <textarea id="wf4-summary" rows="10" placeholder="A draft matter-hub summary will appear here. Edit freely, then copy manually into an approved tool."></textarea>
+            </label>
+
+            <div class="actions">
+              <button class="button" id="wf4-generate" type="button">Generate draft summary</button>
+              <button class="button button--ghost" id="wf4-copy" type="button">Copy draft summary</button>
+              <button class="button button--danger" id="wf4-clear" type="button">Clear form</button>
+            </div>
+            <p class="import-status import-status--info" id="wf4-status" role="status" aria-live="polite"></p>
+
+            <fieldset class="workflow4__placeholders">
+              <legend>Practice-system links (placeholders — disabled)</legend>
+              <div class="actions">
+                <button class="button button--ghost" id="wf4-open-record" type="button" disabled aria-disabled="true" title="Disabled — needs approved practice-system URL and integration">Open practice record</button>
+                <button class="button button--ghost" id="wf4-open-email" type="button" disabled aria-disabled="true" title="Disabled — needs approved matter-email URL and integration">Open matter email</button>
+                <button class="button button--ghost" id="wf4-open-files" type="button" disabled aria-disabled="true" title="Disabled — needs approved matter-files URL and integration">Open matter files</button>
+                <button class="button button--ghost" id="wf4-open-appointment" type="button" disabled aria-disabled="true" title="Disabled — needs approved appointment URL and integration">Open appointment</button>
+              </div>
+              <small class="field__hint">These buttons are disabled. They will remain disabled until approved practice-system URLs and integration details are supplied. This page does not log in to any system, open files, create calendar events, or send messages.</small>
+            </fieldset>
+
+            <div class="notice-panel notice-panel--clinical workflow4__pending" role="note" aria-labelledby="workflow4-pending-title">
+              <div class="notice-panel__summary">
+                <span class="notice-panel__badge" aria-hidden="true">i</span>
+                <h3 id="workflow4-pending-title" class="notice-panel__title">Pending information before this can leave draft</h3>
+              </div>
+              <div class="notice-panel__body">
+                <ul>
+                  <li>Approved practice-system URL patterns (record, email, files, appointment)</li>
+                  <li>Approved authentication/integration method</li>
+                  <li>Approved matter-identifier format and where it may be written</li>
+                  <li>Approved resource metadata source (currently uses the same approved-material list as the other workflows)</li>
+                  <li>Confirmation of what may leave the browser (currently nothing does)</li>
+                </ul>
+              </div>
+            </div>
+          </form>
+        </div>
+      </details>
       </section>
 
       <section id="progress-panel" class="tab-panel" role="tabpanel" aria-labelledby="progress-tab" hidden>
