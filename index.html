@@ -33,19 +33,6 @@
     </header>
 
     <main class="shell" id="main">
-      <section class="panel history-card" aria-labelledby="history-card-title">
-        <div class="panel__header panel__header--split">
-          <div>
-            <h2 id="history-card-title" class="section-title">Herstory — Week by week</h2>
-            <p class="section-hint">Read-only review of completed tasks and any stored weekly health data, grouped by week.</p>
-          </div>
-          <span class="save-state">Read-only</span>
-        </div>
-        <div class="actions">
-          <a class="button" href="history.html" aria-label="Open Herstory — Week by week">Open Herstory — Week by week</a>
-        </div>
-      </section>
-
       <nav class="view-tabs" role="tablist" aria-label="Dashboard sections">
         <button class="view-tab" id="work-tab" type="button" role="tab" aria-selected="true" aria-controls="work-panel">Work</button>
         <button class="view-tab" id="progress-tab" type="button" role="tab" aria-selected="false" aria-controls="progress-panel" tabindex="-1">Progress</button>
@@ -816,6 +803,18 @@
           <button class="button button--danger" type="button" id="health-reset-week">Reset this week</button>
         </div>
         <p class="import-status import-status--info" id="health-status" role="status" aria-live="polite"></p>
+      </section>
+      <section class="panel history-card" aria-labelledby="history-card-title">
+        <div class="panel__header panel__header--split">
+          <div>
+            <h2 id="history-card-title" class="section-title">Herstory — Week by week</h2>
+            <p class="section-hint">Read-only review of completed tasks and any stored weekly health data, grouped by week.</p>
+          </div>
+          <span class="save-state">Read-only</span>
+        </div>
+        <div class="actions">
+          <a class="button" href="history.html" aria-label="Open Herstory — Week by week">Open Herstory — Week by week</a>
+        </div>
       </section>
       </section>
 
