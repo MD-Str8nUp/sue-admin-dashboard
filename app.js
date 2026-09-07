@@ -409,11 +409,27 @@ function removeItem(key, id) {
   renderAll();
 }
 
-function removeTask(id) {
+async function removeTask(id) {
   const task = state.tasks.find((item) => item.id === id);
   if (!task) return;
 
-  if (!window.confirm(`Delete this task?\n\n${task.title}`)) return;
+  const match = isSheetTask(task) ? /^sheet-task-(\d+)$/.exec(String(task.id || "")) : null;
+  const prompt = match
+    ? `Permanently delete this task from the Google Sheet?\n\n${task.title}`
+    : `Delete this task?\n\n${task.title}`;
+  if (!window.confirm(prompt)) return;
+
+  if (match) {
+    try {
+      await sheetWrite("deleteTask", { rowNumber: Number(match[1]) });
+      setApiStatus("Task permanently deleted from Google Sheet.", "success");
+    } catch (err) {
+      const detail = err && err.message ? err.message : String(err);
+      setApiStatus(`Sheet delete failed — task not removed. ${detail}`, "error");
+    }
+    return;
+  }
+
   removeItem("tasks", id);
 }
 
@@ -1438,7 +1454,7 @@ function setupForms() {
     captureSpeechStatus.className = `capture-status capture-status--${type}`;
   }
 
-  function focusCaptureForKeyboard(reason) {
+  function showKeyboardDictationFallback() {
     captureSaveState.textContent = "Typed fallback ready";
     try {
       captureText.focus({ preventScroll: false });
@@ -1456,8 +1472,7 @@ function setupForms() {
     } catch {
       captureText.scrollIntoView();
     }
-    updateSpeechSupportStatus("Use the microphone on the iPhone keyboard to dictate, or type the task.", "info");
-    return reason;
+    updateSpeechSupportStatus("Use the microphone on the iPhone keyboard to dictate", "info");
   }
 
   function initialiseSpeechCapture() {
@@ -1465,7 +1480,7 @@ function setupForms() {
     if (!Recognition) {
       captureSpeak.disabled = false;
       captureSpeak.textContent = "Dictate / type task";
-      updateSpeechSupportStatus("Use the microphone on the iPhone keyboard to dictate, or type the task.", "info");
+      updateSpeechSupportStatus("Use the microphone on the iPhone keyboard to dictate", "info");
       return null;
     }
 
@@ -1502,7 +1517,7 @@ function setupForms() {
   captureSpeak.addEventListener("click", () => {
     const Recognition = SpeechRecognitionConstructor || window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) {
-      focusCaptureForKeyboard("unsupported");
+      showKeyboardDictationFallback();
       return;
     }
     const recognition = new Recognition();
@@ -1517,8 +1532,8 @@ function setupForms() {
       updateSpeechSupportStatus("Speech captured. Review the text and dates before saving.", "success");
       refreshCapturePreview(true);
     };
-    recognition.onerror = (event) => {
-      focusCaptureForKeyboard(event && event.error ? event.error : "recognition-error");
+    recognition.onerror = () => {
+      showKeyboardDictationFallback();
     };
     recognition.onend = () => {
       if (captureSaveState.textContent === "Listening") captureSaveState.textContent = "Typed fallback ready";
@@ -1526,7 +1541,7 @@ function setupForms() {
     try {
       recognition.start();
     } catch {
-      focusCaptureForKeyboard("start-failed");
+      showKeyboardDictationFallback();
     }
   });
 
