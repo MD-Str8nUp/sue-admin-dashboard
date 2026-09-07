@@ -500,7 +500,11 @@ function taskActions(item) {
             setApiStatus("Saved to Google Sheet.", "success");
             return;
           } catch (err) {
-            setApiStatus("Sheet unavailable — updated in this browser only.", "error");
+            const detail = err && err.message ? err.message : String(err);
+            setApiStatus(`Sheet write failed - task status was not changed. ${detail}`, "error");
+            setKanbanStatus(`Could not save "${displayTaskTitle(item) || "task"}" to Google Sheet - status restored. ${detail}`, "error");
+            renderAll();
+            return;
           }
         }
         applyLocalTaskStatus(item, nextStatus);
