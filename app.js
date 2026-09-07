@@ -2817,7 +2817,6 @@ function healthRender() {
       `<span>${dayNum}</span>` +
       `<span class="personal-health__day-mark" aria-hidden="true">${done ? "✓" : "○"}</span>`;
     btn.addEventListener("click", async () => {
-      const previousState = structuredClone(healthState);
       const nextState = structuredClone(healthState);
       if (nextState.days[iso]) {
         delete nextState.days[iso];
@@ -2831,8 +2830,7 @@ function healthRender() {
         await sheetWrite("setPersonalMinutes", { dateKey: iso, minutes: healthState.days[iso] ? 35 : 0 });
         healthSetStatus("Saved to Google Sheet.", "success");
       } catch (err) {
-        await restorePersonalHealthFromSheet(previousState);
-        healthSetStatus("Could not save to Google Sheet. Restored Sheet-backed values.", "error");
+        await restorePersonalHealthFromSheet();
       } finally {
         setHealthControlsDisabled(false);
       }
@@ -2856,7 +2854,6 @@ function healthRender() {
 async function healthAdjust(field, delta) {
   const next = Math.max(0, Math.min(14, healthState[field] + delta));
   if (next === healthState[field]) return;
-  const previousState = structuredClone(healthState);
   healthState[field] = next;
   healthRender();
   const action = delta > 0 ? "addPersonalSession" : "undoPersonalSession";
@@ -2865,8 +2862,7 @@ async function healthAdjust(field, delta) {
     await sheetWrite(action, { kind: field });
     healthSetStatus("Saved to Google Sheet.", "success");
   } catch (err) {
-    await restorePersonalHealthFromSheet(previousState);
-    healthSetStatus("Could not save to Google Sheet. Restored Sheet-backed values.", "error");
+    await restorePersonalHealthFromSheet();
   } finally {
     setHealthControlsDisabled(false);
   }
@@ -3117,12 +3113,14 @@ async function hydratePersonalHealthFromSheet() {
   applyPersonalData(data);
 }
 
-async function restorePersonalHealthFromSheet(previousState) {
+async function restorePersonalHealthFromSheet() {
   try {
     await hydratePersonalHealthFromSheet();
+    healthSetStatus("Could not save to Google Sheet. Restored Sheet-backed values.", "error");
   } catch {
-    healthState = structuredClone(previousState);
+    healthState = healthEmptyWeek(healthCurrentWeekStart());
     healthRender();
+    healthSetStatus("Could not save to Google Sheet and could not reload from it. Week reset — please retry when the Sheet is reachable.", "error");
   }
 }
 
