@@ -612,101 +612,6 @@
         </div>
       </details>
 
-      <details class="panel collapsible-panel workflow5-panel" id="workflow5-panel" aria-labelledby="workflow5-title">
-        <summary class="collapsible-panel__summary">
-          <span><strong id="workflow5-title">Workflow 5 — Personal Admin + Progress (Draft)</strong><small>Guide for turning personal admin into tasks, deadlines, and reminders</small></span>
-          <span class="collapsible-panel__state" aria-hidden="true"></span>
-        </summary>
-        <div class="collapsible-panel__body">
-          <div class="panel__header panel__header--split">
-            <div>
-              <p class="section-hint">Browser-only guide. This section does not save anything. It shows what to type into Quick Capture and where to track progress in the sections you already use.</p>
-            </div>
-            <span class="save-state">DOM-only</span>
-          </div>
-
-          <div class="notice-panel notice-panel--clinical" role="note" aria-labelledby="workflow5-privacy-title">
-            <div class="notice-panel__summary">
-              <span class="notice-panel__badge" aria-hidden="true">i</span>
-              <h3 id="workflow5-privacy-title" class="notice-panel__title">Guide only — no data is written</h3>
-            </div>
-            <div class="notice-panel__body">
-              <p>This workflow is a preparation guide. It never writes, edits, or removes tasks, deadlines, reminders, or health data. It does not touch the Google Sheet. Use the shortcut buttons to jump to Quick Capture, Health, or Progress and act there.</p>
-              <p>Category templates are placeholder wording only. Confirm dates, fees, and requirements against the responsible body (e.g. Law Society) before acting.</p>
-            </div>
-          </div>
-
-          <fieldset class="workflow5__categories" aria-labelledby="workflow5-category-label">
-            <legend id="workflow5-category-label">Choose a personal admin category</legend>
-            <div class="workflow5__chips" id="wf5-category-chips" role="radiogroup" aria-label="Personal admin categories"></div>
-          </fieldset>
-
-          <div class="workflow5__explainer">
-            <h3 class="workflow5__subtitle">Task vs deadline vs reminder</h3>
-            <dl class="workflow5__glossary">
-              <div>
-                <dt>Task</dt>
-                <dd>An action you must complete (e.g. "Submit CPD activity log"). Lands in <strong>This week</strong> once saved via Quick Capture.</dd>
-              </div>
-              <div>
-                <dt>Deadline</dt>
-                <dd>The hard date the task is due by (e.g. "Practising certificate expires 30 June 2026"). Shows in <strong>Upcoming deadlines</strong>.</dd>
-              </div>
-              <div>
-                <dt>Reminder</dt>
-                <dd>A lead-time nudge before the deadline (e.g. "Remind me two days before"). Attaches to the task Quick Capture creates.</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div class="workflow5__capture">
-            <div class="workflow5__capture-head">
-              <h3 class="workflow5__subtitle">What to say in Quick Capture</h3>
-              <span class="workflow5__pill" id="wf5-active-label">Choose a category</span>
-            </div>
-            <p class="workflow5__hint">Paste or dictate this phrase into Quick Capture. It combines the task, the deadline, and a reminder in one sentence.</p>
-            <textarea class="workflow5__phrase" id="wf5-phrase" rows="3" readonly aria-label="Suggested Quick Capture phrase"></textarea>
-            <div class="actions workflow5__actions">
-              <button class="button" id="wf5-copy-phrase" type="button">Copy phrase</button>
-              <button class="button button--ghost" id="wf5-focus-capture" type="button">Open Quick Capture</button>
-            </div>
-            <p class="import-status import-status--info" id="wf5-status" role="status" aria-live="polite"></p>
-          </div>
-
-          <div class="workflow5__checklist-wrap">
-            <h3 class="workflow5__subtitle">Checklist — include these details</h3>
-            <ul class="workflow5__checklist" id="wf5-checklist" aria-label="Checklist for this category"></ul>
-          </div>
-
-          <div class="workflow5__shortcuts" aria-labelledby="wf5-shortcuts-label">
-            <h3 class="workflow5__subtitle" id="wf5-shortcuts-label">Where to track it</h3>
-            <p class="workflow5__hint">Shortcuts scroll or switch to sections that already exist in this dashboard. No new tracking system is created here.</p>
-            <div class="actions workflow5__shortcut-buttons">
-              <button class="button" id="wf5-go-capture" type="button">Go to Quick Capture</button>
-              <button class="button button--ghost" id="wf5-go-week" type="button">Jump to This week</button>
-              <button class="button button--ghost" id="wf5-go-deadlines" type="button">Jump to Upcoming deadlines</button>
-              <button class="button button--ghost" id="wf5-go-progress" type="button">Open Progress / Kanban</button>
-              <button class="button button--ghost" id="wf5-go-health" type="button">Open Health</button>
-            </div>
-          </div>
-
-          <div class="notice-panel notice-panel--clinical workflow5__pending" role="note" aria-labelledby="workflow5-pending-title">
-            <div class="notice-panel__summary">
-              <span class="notice-panel__badge" aria-hidden="true">i</span>
-              <h3 id="workflow5-pending-title" class="notice-panel__title">Pending inputs before this can leave draft</h3>
-            </div>
-            <div class="notice-panel__body">
-              <ul>
-                <li>Approved CPD categories and the current CPD year end date</li>
-                <li>Practising certificate renewal window and fee schedule</li>
-                <li>Approved registration bodies and cycle</li>
-                <li>Preferred lead times for each category</li>
-                <li>Confirmation of whether Xena may auto-draft reminders for these categories</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </details>
       </section>
 
       <section id="progress-panel" class="tab-panel" role="tabpanel" aria-labelledby="progress-tab" hidden>
@@ -872,6 +777,103 @@
               </form>
             </details>
           </section>
+
+      <details class="panel collapsible-panel workflow5-panel" id="workflow5-panel" aria-labelledby="workflow5-title">
+        <summary class="collapsible-panel__summary">
+          <span><strong id="workflow5-title">Workflow 5 — Personal Admin + Progress (Draft)</strong><small>Guide for turning personal admin into tasks, deadlines, and reminders</small></span>
+          <span class="collapsible-panel__state" aria-hidden="true"></span>
+        </summary>
+        <div class="collapsible-panel__body">
+          <div class="panel__header panel__header--split">
+            <div>
+              <p class="section-hint">Browser-only guide. This section does not save anything. It shows what to type into Quick Capture and where to track progress in the sections you already use.</p>
+            </div>
+            <span class="save-state">DOM-only</span>
+          </div>
+
+          <div class="notice-panel notice-panel--clinical" role="note" aria-labelledby="workflow5-privacy-title">
+            <div class="notice-panel__summary">
+              <span class="notice-panel__badge" aria-hidden="true">i</span>
+              <h3 id="workflow5-privacy-title" class="notice-panel__title">Guide only — no data is written</h3>
+            </div>
+            <div class="notice-panel__body">
+              <p>This workflow is a preparation guide. It never writes, edits, or removes tasks, deadlines, reminders, or health data. It does not touch the Google Sheet. Use the shortcut buttons to jump to Quick Capture, Health, or Progress and act there.</p>
+              <p>Category templates are placeholder wording only. Confirm dates, fees, and requirements against the responsible body (e.g. Law Society) before acting.</p>
+            </div>
+          </div>
+
+          <fieldset class="workflow5__categories" aria-labelledby="workflow5-category-label">
+            <legend id="workflow5-category-label">Choose a personal admin category</legend>
+            <div class="workflow5__chips" id="wf5-category-chips" role="radiogroup" aria-label="Personal admin categories"></div>
+          </fieldset>
+
+          <div class="workflow5__explainer">
+            <h3 class="workflow5__subtitle">Task vs deadline vs reminder</h3>
+            <dl class="workflow5__glossary">
+              <div>
+                <dt>Task</dt>
+                <dd>An action you must complete (e.g. "Submit CPD activity log"). Lands in <strong>This week</strong> once saved via Quick Capture.</dd>
+              </div>
+              <div>
+                <dt>Deadline</dt>
+                <dd>The hard date the task is due by (e.g. "Practising certificate expires 30 June 2026"). Shows in <strong>Upcoming deadlines</strong>.</dd>
+              </div>
+              <div>
+                <dt>Reminder</dt>
+                <dd>A lead-time nudge before the deadline (e.g. "Remind me two days before"). Attaches to the task Quick Capture creates.</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="workflow5__capture">
+            <div class="workflow5__capture-head">
+              <h3 class="workflow5__subtitle">What to say in Quick Capture</h3>
+              <span class="workflow5__pill" id="wf5-active-label">Choose a category</span>
+            </div>
+            <p class="workflow5__hint">Paste or dictate this phrase into Quick Capture. It combines the task, the deadline, and a reminder in one sentence.</p>
+            <textarea class="workflow5__phrase" id="wf5-phrase" rows="3" readonly aria-label="Suggested Quick Capture phrase"></textarea>
+            <div class="actions workflow5__actions">
+              <button class="button" id="wf5-copy-phrase" type="button">Copy phrase</button>
+              <button class="button button--ghost" id="wf5-focus-capture" type="button">Open Quick Capture</button>
+            </div>
+            <p class="import-status import-status--info" id="wf5-status" role="status" aria-live="polite"></p>
+          </div>
+
+          <div class="workflow5__checklist-wrap">
+            <h3 class="workflow5__subtitle">Checklist — include these details</h3>
+            <ul class="workflow5__checklist" id="wf5-checklist" aria-label="Checklist for this category"></ul>
+          </div>
+
+          <div class="workflow5__shortcuts" aria-labelledby="wf5-shortcuts-label">
+            <h3 class="workflow5__subtitle" id="wf5-shortcuts-label">Where to track it</h3>
+            <p class="workflow5__hint">Shortcuts scroll or switch to sections that already exist in this dashboard. No new tracking system is created here.</p>
+            <div class="actions workflow5__shortcut-buttons">
+              <button class="button" id="wf5-go-capture" type="button">Go to Quick Capture</button>
+              <button class="button button--ghost" id="wf5-go-week" type="button">Jump to This week</button>
+              <button class="button button--ghost" id="wf5-go-deadlines" type="button">Jump to Upcoming deadlines</button>
+              <button class="button button--ghost" id="wf5-go-progress" type="button">Open Progress / Kanban</button>
+              <button class="button button--ghost" id="wf5-go-health" type="button">Open Health</button>
+            </div>
+          </div>
+
+          <div class="notice-panel notice-panel--clinical workflow5__pending" role="note" aria-labelledby="workflow5-pending-title">
+            <div class="notice-panel__summary">
+              <span class="notice-panel__badge" aria-hidden="true">i</span>
+              <h3 id="workflow5-pending-title" class="notice-panel__title">Pending inputs before this can leave draft</h3>
+            </div>
+            <div class="notice-panel__body">
+              <ul>
+                <li>Approved CPD categories and the current CPD year end date</li>
+                <li>Practising certificate renewal window and fee schedule</li>
+                <li>Approved registration bodies and cycle</li>
+                <li>Preferred lead times for each category</li>
+                <li>Confirmation of whether Xena may auto-draft reminders for these categories</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </details>
+
 
           <section class="notice-panel notice-panel--footer" aria-labelledby="privacy-title">
             <div class="notice-panel__summary">
