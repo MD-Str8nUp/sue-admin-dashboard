@@ -2078,63 +2078,77 @@ const WORKFLOW5_CATEGORIES = [
     id: "cpd",
     label: "CPD",
     activeLabel: "CPD activity",
-    phrase: "Log CPD activity [topic] — [X] units by 31 March 2026; remind me fourteen days before.",
+    phrase: "Log CPD activity [topic] — [X] hours by 30 November 2026; remind me fourteen days before.",
     checklist: [
-      "Activity name and CPD category (e.g. substantive law, ethics)",
-      "Units or hours claimed and evidence held (certificate, notes)",
-      "CPD year end date as the deadline",
-      "Reminder lead time long enough to complete a make-up activity if needed"
+      "Activity name and CPD category against current psychologist requirements",
+      "Hours claimed and evidence held (certificate, provider record, invoice)",
+      "Current CPD year end date as the deadline",
+      "Any remaining CPD requirement to complete before renewal",
+      "Reminder lead time long enough to arrange a make-up activity if needed"
     ]
   },
   {
-    id: "certificate",
-    label: "Practising certificate",
-    activeLabel: "Practising certificate renewal",
-    phrase: "Renew practising certificate by 30 June 2026; remind me fourteen days before.",
+    id: "ahpra-registration",
+    label: "AHPRA registration",
+    activeLabel: "AHPRA registration renewal",
+    phrase: "Renew AHPRA registration by 30 November 2026; remind me twenty-one days before.",
     checklist: [
-      "Certificate holder name and certificate number reference (personal note)",
+      "AHPRA registration number reference (personal admin only)",
       "Renewal window open and close dates",
       "Fee amount and payment method to prepare",
-      "Supporting declarations (CPD, insurance, fit-and-proper) already in place",
-      "Reminder lead time to cover payment clearance"
+      "Required declarations and CPD/insurance confirmations ready",
+      "Reminder lead time to cover payment clearance and any AHPRA processing"
     ]
   },
   {
-    id: "registration",
-    label: "Registration",
-    activeLabel: "Registration renewal",
-    phrase: "Renew registration with [body] by [date]; remind me seven days before.",
+    id: "professional-indemnity",
+    label: "Professional indemnity insurance",
+    activeLabel: "Professional indemnity insurance",
+    phrase: "Renew professional indemnity insurance by [date]; remind me twenty-one days before.",
     checklist: [
-      "Registering body (Law Society, ABN, business name, etc.)",
-      "Renewal reference or member number (personal note)",
-      "Deadline date and any grace period",
-      "Documents or attestations required at renewal",
-      "Reminder lead time appropriate for the body"
+      "Policy renewal date and insurer contact or portal",
+      "Coverage period and minimum cover requirements to confirm",
+      "Premium amount and payment method to prepare",
+      "Certificate of currency storage location after renewal",
+      "Reminder lead time to review cover before the policy expires"
     ]
   },
   {
-    id: "fines",
-    label: "Fines",
-    activeLabel: "Fine or penalty",
-    phrase: "Pay fine [reference] by [date]; remind me two days before.",
+    id: "supervision-peer",
+    label: "Supervision / peer consultation",
+    activeLabel: "Supervision / peer consultation",
+    phrase: "Confirm supervision or peer consultation arrangements by [date]; remind me seven days before.",
     checklist: [
-      "Fine reference number (personal note only)",
-      "Amount and pay-by date",
-      "Payment channel (BPAY, portal, direct debit)",
-      "Whether to review or dispute before paying",
-      "Short reminder lead time — fines are usually fixed date"
+      "Arrangement type and responsible professional body expectation",
+      "Supervisor or peer consultation group contact details if needed",
+      "Frequency, review date, and next session date",
+      "Admin-only evidence to keep, avoiding client names or clinical details",
+      "Reminder lead time to reschedule if availability changes"
+    ]
+  },
+  {
+    id: "practice-admin",
+    label: "Practice admin",
+    activeLabel: "Practice admin",
+    phrase: "Complete practice admin task [task] by [date]; remind me five days before.",
+    checklist: [
+      "Plain-English admin action to complete",
+      "Renewal, review, or submission date",
+      "Responsible body, insurer, platform, or supplier involved",
+      "Document or account needed before starting",
+      "Reminder lead time that allows follow-up before the due date"
     ]
   },
   {
     id: "travel",
     label: "Travel",
     activeLabel: "Travel admin",
-    phrase: "Prepare travel admin for [trip] by [date]; remind me five days before.",
+    phrase: "Prepare travel admin for [trip or appointment block] by [date]; remind me five days before.",
     checklist: [
-      "Trip or admin task summary (destination, purpose)",
+      "Trip or admin task summary (destination and purpose)",
       "Key date (departure, submission, expiry)",
-      "Bookings or forms outstanding (flights, accommodation, forms)",
-      "Documents to carry or upload",
+      "Bookings or forms outstanding (flights, accommodation, venue access)",
+      "Professional documents to carry or upload, with no clinical data",
       "Reminder lead time for bookings and packing"
     ]
   },
@@ -2142,11 +2156,11 @@ const WORKFLOW5_CATEGORIES = [
     id: "dropbox-admin",
     label: "Dropbox admin",
     activeLabel: "Dropbox admin",
-    phrase: "Organise, rename, and move personal admin documents in Dropbox by [date]; remind me three days before.",
+    phrase: "Organise, rename, and move practice admin documents in Dropbox by [date]; remind me three days before.",
     checklist: [
-      "Destination folder for the documents",
-      "Final file names or naming pattern to use",
-      "Access or sharing settings to check",
+      "Destination folder for admin-only documents",
+      "Final file names or naming pattern to use for renewals and evidence",
+      "Access or sharing settings to check, avoiding client or clinical data",
       "Duplicate, archive, or keep-current decision",
       "Due date and reminder lead time"
     ]
@@ -2159,7 +2173,7 @@ const WORKFLOW5_CATEGORIES = [
     checklist: [
       "Plain-English action to complete",
       "Due date or review date",
-      "Any document, account, or person needed before starting",
+      "Any document, account, or non-client contact needed before starting",
       "Whether it belongs in This week or Upcoming deadlines",
       "Reminder lead time that matches the urgency"
     ]
