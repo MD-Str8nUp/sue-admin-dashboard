@@ -694,10 +694,12 @@ function renderProgress() {
   if (!history) return;
   const monday = weekStartDate();
   const completedTasks = completedTasksForProgress();
-  const completedThisWeek = completedTasks.filter((entry) => entry.completedAt && new Date(entry.completedAt) >= monday).length;
+  const doneThisWeekEntries = completedTasks.filter((entry) => entry.completedAt && new Date(entry.completedAt) >= monday);
+  const completedThisWeek = doneThisWeekEntries.length;
   document.getElementById("progress-completed").textContent = String(completedThisWeek);
   document.getElementById("progress-open").textContent = String(state.tasks.filter((item) => item.status !== "Done").length);
   document.getElementById("progress-reminders").textContent = String(reminderDueCount());
+  renderProgressKanban(doneThisWeekEntries);
   history.innerHTML = "";
   if (!completedTasks.length) {
     const empty = document.createElement("li"); empty.className = "empty"; empty.textContent = "Completed tasks will appear here with the date they were marked done."; history.append(empty); return;
@@ -708,6 +710,60 @@ function renderProgress() {
     const date = document.createElement("span");
     date.textContent = entry.completedAt ? `Completed ${formatDateTime(entry.completedAt)}` : "Completed: Not recorded";
     row.append(title, date); history.append(row);
+  });
+}
+
+function renderProgressKanban(doneThisWeekEntries) {
+  const todoList = document.getElementById("kanban-todo-list");
+  const inProgressList = document.getElementById("kanban-inprogress-list");
+  const doneList = document.getElementById("kanban-done-list");
+  if (!todoList || !inProgressList || !doneList) return;
+
+  const active = state.tasks.filter((item) => normaliseTaskStatus(item.status) !== "Done");
+  const todo = active.filter((item) => normaliseTaskStatus(item.status) === "Open");
+  const inProgress = active.filter((item) => normaliseTaskStatus(item.status) === "Waiting");
+
+  document.getElementById("kanban-todo-count").textContent = String(todo.length);
+  document.getElementById("kanban-inprogress-count").textContent = String(inProgress.length);
+  document.getElementById("kanban-done-count").textContent = String(doneThisWeekEntries.length);
+
+  fillKanbanColumn(todoList, todo, "No open tasks.", (item) => {
+    const meta = taskMetaText(item);
+    return meta && meta !== "No date" ? meta : "";
+  });
+  fillKanbanColumn(inProgressList, inProgress, "Nothing waiting.", (item) => {
+    const meta = taskMetaText(item);
+    return meta && meta !== "No date" ? meta : "";
+  });
+  fillKanbanColumn(doneList, doneThisWeekEntries, "Nothing completed this week yet.", (entry) => (
+    entry.completedAt ? `Completed ${formatDateTime(entry.completedAt)}` : ""
+  ), (entry) => entry.title);
+}
+
+function fillKanbanColumn(listEl, items, emptyText, metaFn, titleFn) {
+  listEl.innerHTML = "";
+  if (!items.length) {
+    const empty = document.createElement("li");
+    empty.className = "kanban-card kanban-card--empty";
+    empty.textContent = emptyText;
+    listEl.append(empty);
+    return;
+  }
+  items.forEach((item) => {
+    const card = document.createElement("li");
+    card.className = "kanban-card";
+    const title = document.createElement("strong");
+    title.className = "kanban-card__title";
+    title.textContent = titleFn ? titleFn(item) : (displayTaskTitle(item) || "Task");
+    card.append(title);
+    const metaText = metaFn ? metaFn(item) : "";
+    if (metaText) {
+      const meta = document.createElement("span");
+      meta.className = "kanban-card__meta";
+      meta.textContent = metaText;
+      card.append(meta);
+    }
+    listEl.append(card);
   });
 }
 

@@ -420,7 +420,28 @@
             <div><span>Still open</span><strong id="progress-open">0</strong></div>
             <div><span>Reminders due</span><strong id="progress-reminders">0</strong></div>
           </div>
-          <h3 class="progress-subtitle">Completed work</h3>
+          <h3 class="progress-subtitle">Kanban board</h3>
+          <div class="progress-kanban" id="progress-kanban" role="list" aria-label="Task progress board">
+            <section class="kanban-col kanban-col--todo" role="listitem" aria-labelledby="kanban-todo-label">
+              <header class="kanban-col__header">
+                <h4 id="kanban-todo-label" class="kanban-col__title">To do <span class="kanban-col__count" id="kanban-todo-count">0</span></h4>
+              </header>
+              <ul class="kanban-col__list" id="kanban-todo-list"></ul>
+            </section>
+            <section class="kanban-col kanban-col--inprogress" role="listitem" aria-labelledby="kanban-inprogress-label">
+              <header class="kanban-col__header">
+                <h4 id="kanban-inprogress-label" class="kanban-col__title">In progress <span class="kanban-col__count" id="kanban-inprogress-count">0</span></h4>
+              </header>
+              <ul class="kanban-col__list" id="kanban-inprogress-list"></ul>
+            </section>
+            <section class="kanban-col kanban-col--done" role="listitem" aria-labelledby="kanban-done-label">
+              <header class="kanban-col__header">
+                <h4 id="kanban-done-label" class="kanban-col__title">Done this week <span class="kanban-col__count" id="kanban-done-count">0</span></h4>
+              </header>
+              <ul class="kanban-col__list" id="kanban-done-list"></ul>
+            </section>
+          </div>
+          <h3 class="progress-subtitle">Recently completed</h3>
           <ul class="list progress-history" id="progress-history"></ul>
         </section>
       </section>

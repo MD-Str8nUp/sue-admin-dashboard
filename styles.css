@@ -283,12 +283,94 @@ h2 {
 .progress-history__item { display: grid; gap: 2px; padding: 10px; border-left: 3px solid var(--success); background: #f4faf6; border-radius: 0 var(--radius) var(--radius) 0; }
 .progress-history__item span { color: var(--muted); font-size: .82rem; }
 
+.progress-kanban {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 0 18px;
+  min-width: 0;
+}
+.kanban-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--pale);
+}
+.kanban-col__header { margin: 0 0 8px; }
+.kanban-col__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--navy);
+  font-size: .82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+.kanban-col__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid var(--line-soft);
+  color: var(--navy);
+  font-size: .72rem;
+  font-weight: 800;
+}
+.kanban-col--todo { border-top: 3px solid var(--navy-soft); }
+.kanban-col--inprogress { border-top: 3px solid #b7811c; background: #fdf7ea; }
+.kanban-col--done { border-top: 3px solid var(--success); background: #f4faf6; }
+.kanban-col__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; min-width: 0; }
+.kanban-card {
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  background: #ffffff;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+.kanban-card__title { color: var(--navy); font-size: .9rem; line-height: 1.25; overflow-wrap: anywhere; }
+.kanban-card__meta { color: var(--muted); font-size: .78rem; overflow-wrap: anywhere; }
+.kanban-card--empty {
+  background: transparent;
+  border: 1px dashed var(--line-soft);
+  color: var(--muted);
+  font-size: .78rem;
+  text-align: center;
+  padding: 12px 8px;
+}
+
 @media (max-width: 560px) {
   .progress-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin: 10px 0 12px; }
   .progress-stats div { padding: 8px 6px; }
   .progress-stats span { font-size: .62rem; overflow-wrap: anywhere; }
   .progress-stats strong { font-size: 1.35rem; }
   .progress-history__item { padding: 9px; }
+  .progress-kanban {
+    display: flex;
+    grid-template-columns: none;
+    gap: 8px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    margin-inline: -4px;
+    padding-inline: 4px;
+  }
+  .kanban-col {
+    flex: 0 0 78%;
+    max-width: 78%;
+    scroll-snap-align: start;
+  }
+  .kanban-col__title { font-size: .78rem; }
 }
 
 /* -------- Compact Work overview / collapsible tools -------- */
