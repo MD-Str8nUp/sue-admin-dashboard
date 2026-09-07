@@ -662,7 +662,7 @@
         <div class="panel__header panel__header--split">
           <div>
             <h2 id="personal-health-title" class="section-title">Health</h2>
-            <p class="section-hint">Private wellbeing tracker for this browser. Separate from work and clinical data.</p>
+            <p class="section-hint">Private wellbeing tracker stored through the Google Sheet. Separate from work and clinical data.</p>
           </div>
           <span class="save-state" id="health-week-label">This week</span>
         </div>
@@ -670,11 +670,11 @@
         <div class="notice-panel notice-panel--clinical" role="note" aria-labelledby="personal-health-privacy-title">
           <div class="notice-panel__summary">
             <span class="notice-panel__badge" aria-hidden="true">i</span>
-            <h3 id="personal-health-privacy-title" class="notice-panel__title">Private and local only</h3>
+            <h3 id="personal-health-privacy-title" class="notice-panel__title">Stored in Google Sheet only</h3>
           </div>
           <div class="notice-panel__body">
-            <p>Habit completions are stored only in this browser under a dedicated key. They are never included in dashboard export or import, Information for Xena, the clinical note formatter, or any network request.</p>
-            <p>Do not enter symptoms, diagnoses, medications or any real health information here. This is a simple habit checklist only.</p>
+            <p>Habit completions are saved only through the Google Sheet bridge. They are not stored in this browser, dashboard export or import, Information for Xena, the clinical note formatter, email, uploads or practice systems.</p>
+            <p>Do not enter symptoms, diagnoses, medications or any clinical or health details here. This is a simple habit checklist only.</p>
           </div>
         </div>
 
@@ -710,9 +710,6 @@
           </div>
         </div>
 
-        <div class="actions">
-          <button class="button button--danger" type="button" id="health-reset-week">Reset this week</button>
-        </div>
         <p class="import-status import-status--info" id="health-status" role="status" aria-live="polite"></p>
       </section>
       <section class="panel history-card" aria-labelledby="history-card-title">

@@ -2721,7 +2721,6 @@ function setupForms() {
   });
 }
 
-const HEALTH_STORAGE_KEY = "sueAdminDashboard:health:v1";
 const HEALTH_DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const HEALTH_TARGETS = { strength: 2, yoga: 2, activityMinutes: 35, activityDaysPerWeek: 7 };
 
@@ -2744,31 +2743,11 @@ function healthEmptyWeek(weekStart) {
   return { weekStart, days: {}, strength: 0, yoga: 0 };
 }
 
-function healthLoad() {
-  const todayMonday = healthIsoDate(healthMondayOf(new Date()));
-  try {
-    const raw = localStorage.getItem(HEALTH_STORAGE_KEY);
-    if (!raw) return healthEmptyWeek(todayMonday);
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || parsed.weekStart !== todayMonday) {
-      return healthEmptyWeek(todayMonday);
-    }
-    return {
-      weekStart: todayMonday,
-      days: parsed.days && typeof parsed.days === "object" ? parsed.days : {},
-      strength: Math.max(0, Number.parseInt(parsed.strength, 10) || 0),
-      yoga: Math.max(0, Number.parseInt(parsed.yoga, 10) || 0)
-    };
-  } catch {
-    return healthEmptyWeek(todayMonday);
-  }
+function healthCurrentWeekStart() {
+  return healthIsoDate(healthMondayOf(new Date()));
 }
 
-let healthState = healthLoad();
-
-function healthSave() {
-  localStorage.setItem(HEALTH_STORAGE_KEY, JSON.stringify(healthState));
-}
+let healthState = healthEmptyWeek(healthCurrentWeekStart());
 
 function healthWeekDates() {
   const start = new Date(`${healthState.weekStart}T00:00:00`);
@@ -2790,6 +2769,12 @@ function healthSetStatus(message, type = "info") {
   const el = document.getElementById("health-status");
   el.textContent = message;
   el.className = `import-status import-status--${type}`;
+}
+
+function setHealthControlsDisabled(disabled) {
+  document.querySelectorAll("#health-panel .personal-health button").forEach((button) => {
+    button.disabled = disabled;
+  });
 }
 
 function healthRenderPips(container, count, target) {
@@ -2832,18 +2817,24 @@ function healthRender() {
       `<span>${dayNum}</span>` +
       `<span class="personal-health__day-mark" aria-hidden="true">${done ? "✓" : "○"}</span>`;
     btn.addEventListener("click", async () => {
-      if (healthState.days[iso]) {
-        delete healthState.days[iso];
+      const previousState = structuredClone(healthState);
+      const nextState = structuredClone(healthState);
+      if (nextState.days[iso]) {
+        delete nextState.days[iso];
       } else {
-        healthState.days[iso] = true;
+        nextState.days[iso] = true;
       }
-      healthSave();
+      healthState = nextState;
       healthRender();
+      setHealthControlsDisabled(true);
       try {
         await sheetWrite("setPersonalMinutes", { dateKey: iso, minutes: healthState.days[iso] ? 35 : 0 });
         healthSetStatus("Saved to Google Sheet.", "success");
       } catch (err) {
-        healthSetStatus("Sheet unavailable — saved in this browser only.", "error");
+        await restorePersonalHealthFromSheet(previousState);
+        healthSetStatus("Could not save to Google Sheet. Restored Sheet-backed values.", "error");
+      } finally {
+        setHealthControlsDisabled(false);
       }
     });
     li.append(btn);
@@ -2865,15 +2856,19 @@ function healthRender() {
 async function healthAdjust(field, delta) {
   const next = Math.max(0, Math.min(14, healthState[field] + delta));
   if (next === healthState[field]) return;
+  const previousState = structuredClone(healthState);
   healthState[field] = next;
-  healthSave();
   healthRender();
   const action = delta > 0 ? "addPersonalSession" : "undoPersonalSession";
+  setHealthControlsDisabled(true);
   try {
     await sheetWrite(action, { kind: field });
     healthSetStatus("Saved to Google Sheet.", "success");
   } catch (err) {
-    healthSetStatus("Sheet unavailable — saved in this browser only.", "error");
+    await restorePersonalHealthFromSheet(previousState);
+    healthSetStatus("Could not save to Google Sheet. Restored Sheet-backed values.", "error");
+  } finally {
+    setHealthControlsDisabled(false);
   }
 }
 
@@ -2882,13 +2877,6 @@ function setupPersonalHealth() {
   document.getElementById("health-strength-undo").addEventListener("click", () => healthAdjust("strength", -1));
   document.getElementById("health-yoga-add").addEventListener("click", () => healthAdjust("yoga", 1));
   document.getElementById("health-yoga-undo").addEventListener("click", () => healthAdjust("yoga", -1));
-  document.getElementById("health-reset-week").addEventListener("click", () => {
-    if (!window.confirm("Reset all personal health habits for this week? This cannot be undone.")) return;
-    healthState = healthEmptyWeek(healthIsoDate(healthMondayOf(new Date())));
-    healthSave();
-    healthRender();
-    healthSetStatus("Personal health week reset in this browser.", "success");
-  });
   healthRender();
 }
 
@@ -3121,8 +3109,21 @@ function applyPersonalData(data) {
     strength: strengthCount,
     yoga: yogaCount
   };
-  healthSave();
   healthRender();
+}
+
+async function hydratePersonalHealthFromSheet() {
+  const data = await jsonpGet("personalData");
+  applyPersonalData(data);
+}
+
+async function restorePersonalHealthFromSheet(previousState) {
+  try {
+    await hydratePersonalHealthFromSheet();
+  } catch {
+    healthState = structuredClone(previousState);
+    healthRender();
+  }
 }
 
 function countTimestampsInWeek(list, weekStartIso) {
