@@ -2007,3 +2007,152 @@ textarea:focus {
     min-height: 44px;
   }
 }
+
+/* -------- History card + History page (shared narrow styles) -------- */
+
+.history-card {
+  background: linear-gradient(180deg, #ffffff 0%, var(--pale) 100%);
+  border-color: var(--pale-strong);
+}
+
+.history-card .actions {
+  margin-top: 10px;
+}
+
+.history-page__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.history-page__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.history-page__filter select {
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.history-status {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--pale);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.history-status--error {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.history-status--empty {
+  border-style: solid;
+}
+
+.history-weeks {
+  display: grid;
+  gap: 14px;
+}
+
+.history-week {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px 16px;
+}
+
+.history-week__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.history-week__title {
+  margin: 0;
+  color: var(--navy);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.history-week__range {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.history-week__group {
+  margin-top: 10px;
+}
+
+.history-week__group h4 {
+  margin: 0 0 4px;
+  color: var(--navy-soft);
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.history-week__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.history-week__list li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.history-week__list time {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.history-week__empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+@media (max-width: 640px) {
+  .history-page__toolbar {
+    gap: 8px;
+  }
+  .history-page__filter {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .history-week {
+    padding: 12px;
+  }
+}

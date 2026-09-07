@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>History — Week by week · Sue’s Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar" role="banner">
+      <div class="topbar__inner">
+        <div class="topbar__brand">
+          <h1 class="topbar__title">History — Week by week</h1>
+          <p class="topbar__subtitle">Read-only view of completed tasks and stored weekly health data</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="shell" id="main">
+      <section class="panel history-card" aria-labelledby="history-title">
+        <div class="panel__header panel__header--split">
+          <div>
+            <h2 id="history-title" class="section-title">Weekly summary</h2>
+            <p class="section-hint">Most recent week first. Grouped by ISO week (Monday–Sunday, Australia).</p>
+          </div>
+          <span class="save-state">Read-only</span>
+        </div>
+
+        <div class="notice-panel notice-panel--clinical" role="note" aria-labelledby="history-readonly-title">
+          <div class="notice-panel__summary">
+            <span class="notice-panel__badge" aria-hidden="true">i</span>
+            <h3 id="history-readonly-title" class="notice-panel__title">Read-only</h3>
+          </div>
+          <div class="notice-panel__body">
+            <p>This page only reads from the same public dashboard data source used by the main dashboard. It does not add, edit, or delete tasks, reminders, deadlines, or health data.</p>
+          </div>
+        </div>
+
+        <div class="history-page__toolbar">
+          <a class="button button--ghost" href="index.html">← Back to dashboard</a>
+          <label class="history-page__filter">
+            <span>Show</span>
+            <select id="history-range" aria-label="Number of past weeks to show">
+              <option value="4">Last 4 weeks</option>
+              <option value="8" selected>Last 8 weeks</option>
+              <option value="12">Last 12 weeks</option>
+              <option value="all">All available</option>
+            </select>
+          </label>
+        </div>
+
+        <p id="history-status" class="history-status" role="status" aria-live="polite">Loading weekly history…</p>
+
+        <div id="history-weeks" class="history-weeks" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <script src="history.js"></script>
+  </body>
+</html>
