@@ -1438,11 +1438,29 @@ function setupForms() {
     captureSpeechStatus.className = `capture-status capture-status--${type}`;
   }
 
+  function focusCaptureTextForKeyboard() {
+    captureText.focus({ preventScroll: false });
+    const end = captureText.value.length;
+    try {
+      captureText.setSelectionRange(end, end);
+    } catch {
+      // Some mobile browsers may not expose selection APIs until the field is active.
+    }
+    captureText.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  function showKeyboardDictationFallback() {
+    captureSaveState.textContent = "Typed fallback ready";
+    focusCaptureTextForKeyboard();
+    updateSpeechSupportStatus("Use the microphone on the iPhone keyboard to dictate", "info");
+  }
+
   function initialiseSpeechCapture() {
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) {
-      captureSpeak.disabled = true;
-      updateSpeechSupportStatus("Speech input is not supported in this browser. Type the task instead.", "error");
+      captureSpeak.disabled = false;
+      captureSpeak.textContent = "Dictate / type task";
+      updateSpeechSupportStatus("Use the microphone on the iPhone keyboard to dictate", "info");
       return null;
     }
 
@@ -1479,7 +1497,7 @@ function setupForms() {
   captureSpeak.addEventListener("click", () => {
     const Recognition = SpeechRecognitionConstructor || window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) {
-      updateSpeechSupportStatus("Speech input is not supported in this browser. Type the task instead.", "error");
+      showKeyboardDictationFallback();
       return;
     }
     const recognition = new Recognition();
@@ -1494,10 +1512,8 @@ function setupForms() {
       updateSpeechSupportStatus("Speech captured. Review the text and dates before saving.", "success");
       refreshCapturePreview(true);
     };
-    recognition.onerror = (event) => {
-      captureSaveState.textContent = "Typed fallback ready";
-      const blocked = event.error === "not-allowed" || event.error === "service-not-allowed";
-      updateSpeechSupportStatus(blocked ? "Microphone permission is blocked or unavailable. Type the task instead." : "Speech capture did not complete. Type the task instead.", "error");
+    recognition.onerror = () => {
+      showKeyboardDictationFallback();
     };
     recognition.onend = () => {
       if (captureSaveState.textContent === "Listening") captureSaveState.textContent = "Typed fallback ready";
@@ -1505,7 +1521,7 @@ function setupForms() {
     try {
       recognition.start();
     } catch {
-      updateSpeechSupportStatus("Speech capture could not start. Type the task instead.", "error");
+      showKeyboardDictationFallback();
     }
   });
 
