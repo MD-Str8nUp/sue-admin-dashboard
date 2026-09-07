@@ -3,15 +3,15 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>History — Week by week · Sue’s Admin Dashboard</title>
+    <title>Herstory — Week by week · Sue’s Admin Dashboard</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <header class="topbar" role="banner">
       <div class="topbar__inner">
         <div class="topbar__brand">
-          <h1 class="topbar__title">History — Week by week</h1>
-          <p class="topbar__subtitle">Read-only view of completed tasks and stored weekly health data</p>
+          <h1 class="topbar__title">Herstory — Week by week</h1>
+          <p class="topbar__subtitle">Read-only view of completed tasks and explicit weekly health history when recorded</p>
         </div>
       </div>
     </header>
@@ -21,7 +21,7 @@
         <div class="panel__header panel__header--split">
           <div>
             <h2 id="history-title" class="section-title">Weekly summary</h2>
-            <p class="section-hint">Most recent week first. Grouped by ISO week (Monday–Sunday, Australia).</p>
+            <p class="section-hint">Most recent week first. Grouped by Monday-start week, capped at eight weeks.</p>
           </div>
           <span class="save-state">Read-only</span>
         </div>
@@ -43,13 +43,11 @@
             <select id="history-range" aria-label="Number of past weeks to show">
               <option value="4">Last 4 weeks</option>
               <option value="8" selected>Last 8 weeks</option>
-              <option value="12">Last 12 weeks</option>
-              <option value="all">All available</option>
             </select>
           </label>
         </div>
 
-        <p id="history-status" class="history-status" role="status" aria-live="polite">Loading weekly history…</p>
+        <p id="history-status" class="history-status" role="status" aria-live="polite">Loading Herstory — Week by week…</p>
 
         <div id="history-weeks" class="history-weeks" aria-live="polite"></div>
       </section>

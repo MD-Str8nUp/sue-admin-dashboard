@@ -3,40 +3,63 @@
 
   const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzbfT3gTYqPdkLmxGF6BZGLiGFplwzk9dIFGOJVUExASHPU83Mxxi1-ORAJNNBUfGnf/exec";
   const SHEET_API_TIMEOUT_MS = 10000;
+  const MAX_WEEKS = 8;
+  const RECENT_ITEMS_LIMIT = 6;
 
   const statusEl = document.getElementById("history-status");
   const weeksEl = document.getElementById("history-weeks");
   const rangeEl = document.getElementById("history-range");
 
-  let dashboardResult = null;
-  let personalResult = null;
+  const auDate = new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Australia/Sydney"
+  });
+  const auShortDate = new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "short",
+    timeZone: "Australia/Sydney"
+  });
+  const auDateTime = new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Australia/Sydney"
+  });
 
   function setStatus(text, kind) {
+    if (!statusEl) return;
     statusEl.textContent = text;
     statusEl.className = "history-status" + (kind ? " history-status--" + kind : "");
     statusEl.hidden = false;
   }
 
   function hideStatus() {
-    statusEl.hidden = true;
+    if (statusEl) statusEl.hidden = true;
   }
 
-  function jsonpGet(action) {
-    return new Promise((resolve, reject) => {
+  function jsonpGetDashboardData() {
+    return new Promise(function (resolve, reject) {
       const cbName = "__sueHistoryCb_" + Date.now() + "_" + Math.floor(Math.random() * 1e9);
       const script = document.createElement("script");
       let timer;
 
       function cleanup() {
         clearTimeout(timer);
-        try { delete window[cbName]; } catch (_e) { window[cbName] = undefined; }
+        try {
+          delete window[cbName];
+        } catch (_err) {
+          window[cbName] = undefined;
+        }
         if (script.parentNode) script.parentNode.removeChild(script);
       }
 
       window[cbName] = function (payload) {
         cleanup();
         if (payload && payload.ok) {
-          resolve(payload.data);
+          resolve(payload.data || {});
         } else {
           reject(new Error(payload && payload.error ? payload.error : "sheet api error"));
         }
@@ -52,26 +75,31 @@
         reject(new Error("sheet api timeout"));
       }, SHEET_API_TIMEOUT_MS);
 
-      const params = new URLSearchParams({ action: action, callback: cbName });
+      const params = new URLSearchParams({ action: "dashboardData", callback: cbName });
       const sep = SHEET_API_URL.includes("?") ? "&" : "?";
       script.src = SHEET_API_URL + sep + params.toString();
       document.head.appendChild(script);
     });
   }
 
-  // ISO week helpers (Monday start).
-  function startOfIsoWeek(date) {
+  function parseDate(value) {
+    if (!value) return null;
+    const text = String(value).trim();
+    if (!text) return null;
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(text) ? new Date(text + "T00:00:00") : new Date(text);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function startOfMondayWeek(date) {
     const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const dow = d.getDay(); // 0=Sun
-    const offset = dow === 0 ? -6 : 1 - dow;
-    d.setDate(d.getDate() + offset);
+    const day = d.getDay();
+    d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
     d.setHours(0, 0, 0, 0);
     return d;
   }
 
-  function isoWeekKey(date) {
-    const start = startOfIsoWeek(date);
-    // ISO week number
+  function isoWeekInfo(date) {
+    const start = startOfMondayWeek(date);
     const tmp = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate()));
     const dayNum = (tmp.getUTCDay() + 6) % 7;
     tmp.setUTCDate(tmp.getUTCDate() - dayNum + 3);
@@ -80,268 +108,327 @@
     if (tmp.getUTCDay() !== 4) {
       tmp.setUTCMonth(0, 1 + ((4 - tmp.getUTCDay()) + 7) % 7);
     }
-    const weekNum = 1 + Math.round((firstThursday - tmp.getTime()) / (7 * 24 * 3600 * 1000));
+    const week = 1 + Math.round((firstThursday - tmp.getTime()) / 604800000);
     const year = new Date(firstThursday).getUTCFullYear();
-    return { key: year + "-W" + String(weekNum).padStart(2, "0"), year: year, week: weekNum, start: start };
+    return { key: year + "-W" + String(week).padStart(2, "0"), year: year, week: week, start: start };
   }
 
-  const AU_DATE = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric", timeZone: "Australia/Sydney" });
-  const AU_SHORT = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", timeZone: "Australia/Sydney" });
-  const AU_TIME = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Australia/Sydney" });
-
-  function fmtRange(start) {
+  function formatWeekRange(start) {
     const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
-    return AU_SHORT.format(start) + " – " + AU_DATE.format(end);
+    return auShortDate.format(start) + " - " + auDate.format(end);
   }
 
-  function parseDate(value) {
-    if (!value) return null;
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return null;
-    return d;
+  function normaliseStatus(value) {
+    const status = String(value || "").trim().toLowerCase();
+    if (!status) return "Done";
+    if (status === "done" || status === "complete" || status === "completed") return "Done";
+    return String(value).trim();
   }
 
-  function buildWeeks(completionRows, personal) {
+  function isCompletedStatus(value) {
+    return normaliseStatus(value).toLowerCase().match(/^(done|complete|completed)$/);
+  }
+
+  function normaliseCompletedTasks(data) {
+    const rows = []
+      .concat(Array.isArray(data && data.completionHistory) ? data.completionHistory : [])
+      .concat(Array.isArray(data && data.taskHistory) ? data.taskHistory : []);
+    const seen = new Set();
+
+    return rows
+      .map(function (row) {
+        if (!row || typeof row !== "object") return null;
+        const title = String(row.title || row.task || row.taskTitle || row.name || "").trim();
+        const completedAt = parseDate(
+          row.completedAt ||
+          row.completedTimestamp ||
+          row.completedDate ||
+          row.completedOn ||
+          row.completionDate ||
+          row.dateCompleted ||
+          row.timestamp
+        );
+        const status = normaliseStatus(row.status || "Done");
+        if (!title || !completedAt || !isCompletedStatus(status)) return null;
+        const sourceRow = String(row.sourceRow || row.rowNumber || "");
+        const key = [sourceRow, title, completedAt.toISOString()].join("|");
+        if (seen.has(key)) return null;
+        seen.add(key);
+        return { title: title, completedAt: completedAt, status: status };
+      })
+      .filter(Boolean)
+      .sort(function (a, b) {
+        return b.completedAt - a.completedAt;
+      });
+  }
+
+  function pickExplicitHealthPayload(data) {
+    if (!data || typeof data !== "object") return null;
+    const keys = [
+      "healthHistory",
+      "healthStatus",
+      "healthStatuses",
+      "weeklyHealthHistory",
+      "weeklyHealthStatus",
+      "personalHealthHistory",
+      "personalHealthStatus",
+      "health-history",
+      "health-status",
+      "weekly-health-history",
+      "weekly-health-status",
+      "personal-health-history",
+      "personal-health-status"
+    ];
+
+    for (const key of keys) {
+      if (Object.hasOwn(data, key) && data[key] !== null && data[key] !== undefined && data[key] !== "") {
+        return { key: key, value: data[key] };
+      }
+    }
+    return null;
+  }
+
+  function healthRowsFromPayload(payload) {
+    if (!payload) return [];
+    if (Array.isArray(payload.value)) return payload.value;
+    if (typeof payload.value === "object") {
+      return Object.entries(payload.value).map(function ([key, value]) {
+        if (value && typeof value === "object") {
+          return { ...value, date: value.date || value.weekStart || key };
+        }
+        return { date: key, status: value };
+      });
+    }
+    return [{ status: payload.value }];
+  }
+
+  function normaliseHealthItems(data) {
+    const payload = pickExplicitHealthPayload(data);
+    if (!payload) return { available: false, items: [] };
+
+    const items = healthRowsFromPayload(payload)
+      .map(function (row) {
+        if (!row || typeof row !== "object") return null;
+        const date = parseDate(row.weekStart || row.week || row.date || row.dateKey || row.completedAt || row.timestamp);
+        const status = String(row.status || row.summary || row.label || row.note || row.title || "").trim();
+        const parts = [];
+
+        [
+          ["Activity", row.activity || row.activityDays || row.days],
+          ["Strength", row.strength || row.strengthSessions],
+          ["Yoga/Pilates", row.yoga || row.yogaSessions || row.pilates]
+        ].forEach(function ([label, value]) {
+          if (value === null || value === undefined || value === "") return;
+          parts.push(label + ": " + String(value).trim());
+        });
+
+        const text = status || parts.join(" | ");
+        if (!text) return null;
+        return { date: date, text: text };
+      })
+      .filter(Boolean);
+
+    return { available: true, items: items };
+  }
+
+  function ensureWeek(map, info) {
+    if (!map.has(info.key)) {
+      map.set(info.key, {
+        key: info.key,
+        year: info.year,
+        week: info.week,
+        start: info.start,
+        completedTasks: [],
+        healthItems: []
+      });
+    }
+    return map.get(info.key);
+  }
+
+  function buildWeeks(data) {
     const map = new Map();
+    const completedTasks = normaliseCompletedTasks(data);
+    const health = normaliseHealthItems(data);
 
-    function ensureWeek(info) {
-      if (!map.has(info.key)) {
-        map.set(info.key, {
-          key: info.key,
-          year: info.year,
-          week: info.week,
-          start: info.start,
-          completedTasks: [],
-          activityDays: [],
-          strengthSessions: [],
-          yogaSessions: []
-        });
-      }
-      return map.get(info.key);
-    }
-
-    (Array.isArray(completionRows) ? completionRows : []).forEach(function (row) {
-      if (!row || typeof row !== "object") return;
-      const title = String(row.title || row.task || row.taskTitle || "").trim();
-      const completedAt = parseDate(row.completedAt || row.completedTimestamp || row.completedDate);
-      if (!title || !completedAt) return;
-      const info = isoWeekKey(completedAt);
-      ensureWeek(info).completedTasks.push({ title: title, at: completedAt, status: String(row.status || "Done") });
+    completedTasks.forEach(function (item) {
+      const info = isoWeekInfo(item.completedAt);
+      ensureWeek(map, info).completedTasks.push(item);
     });
 
-    let daysSeen = 0;
-    let strengthSeen = 0;
-    let yogaSeen = 0;
-
-    if (personal && typeof personal === "object") {
-      if (personal.days && typeof personal.days === "object") {
-        Object.entries(personal.days).forEach(function (entry) {
-          const iso = entry[0];
-          const minutes = Number(entry[1]);
-          if (!iso || !(minutes > 0)) return;
-          const d = parseDate(iso.length === 10 ? iso + "T00:00:00" : iso);
-          if (!d) return;
-          daysSeen += 1;
-          const info = isoWeekKey(d);
-          ensureWeek(info).activityDays.push({ date: d, minutes: minutes });
-        });
-      }
-      if (Array.isArray(personal.strength)) {
-        personal.strength.forEach(function (ts) {
-          const d = parseDate(ts);
-          if (!d) return;
-          strengthSeen += 1;
-          const info = isoWeekKey(d);
-          ensureWeek(info).strengthSessions.push(d);
-        });
-      }
-      if (Array.isArray(personal.yoga)) {
-        personal.yoga.forEach(function (ts) {
-          const d = parseDate(ts);
-          if (!d) return;
-          yogaSeen += 1;
-          const info = isoWeekKey(d);
-          ensureWeek(info).yogaSessions.push(d);
-        });
-      }
+    if (health.available) {
+      health.items.forEach(function (item) {
+        const date = item.date || new Date();
+        const info = isoWeekInfo(date);
+        ensureWeek(map, info).healthItems.push(item);
+      });
     }
-
-    const weeks = Array.from(map.values()).sort(function (a, b) {
-      return b.start.getTime() - a.start.getTime();
-    });
 
     return {
-      weeks: weeks,
-      hasAnyPersonal: (daysSeen + strengthSeen + yogaSeen) > 0,
-      personalCounts: { days: daysSeen, strength: strengthSeen, yoga: yogaSeen }
+      healthAvailable: health.available,
+      weeks: Array.from(map.values())
+        .sort(function (a, b) {
+          return b.start - a.start;
+        })
+        .slice(0, MAX_WEEKS)
     };
   }
 
-  function renderList(items, formatter) {
-    const ul = document.createElement("ul");
-    ul.className = "history-week__list";
-    items.forEach(function (item) {
-      const li = document.createElement("li");
-      formatter(li, item);
-      ul.appendChild(li);
-    });
-    return ul;
+  function appendSummary(section, week, healthAvailable) {
+    const summary = document.createElement("p");
+    summary.className = "history-week__empty";
+    const bits = [week.completedTasks.length + " completed task" + (week.completedTasks.length === 1 ? "" : "s")];
+    if (healthAvailable) {
+      bits.push(week.healthItems.length + " health status " + (week.healthItems.length === 1 ? "entry" : "entries"));
+    }
+    summary.textContent = bits.join(" | ");
+    section.appendChild(summary);
   }
 
-  function renderWeek(week, personalUnavailable) {
+  function appendCompletedTasks(section, tasks) {
+    const group = document.createElement("div");
+    group.className = "history-week__group";
+
+    const heading = document.createElement("h4");
+    heading.textContent = "Recently completed";
+    group.appendChild(heading);
+
+    if (!tasks.length) {
+      const empty = document.createElement("p");
+      empty.className = "history-week__empty";
+      empty.textContent = "No completed tasks recorded for this week.";
+      group.appendChild(empty);
+    } else {
+      const ul = document.createElement("ul");
+      ul.className = "history-week__list";
+      tasks.slice(0, RECENT_ITEMS_LIMIT).forEach(function (task) {
+        const li = document.createElement("li");
+        const time = document.createElement("time");
+        time.dateTime = task.completedAt.toISOString();
+        time.textContent = auDateTime.format(task.completedAt);
+        const title = document.createElement("span");
+        title.textContent = task.title;
+        li.appendChild(time);
+        li.appendChild(title);
+        ul.appendChild(li);
+      });
+      group.appendChild(ul);
+    }
+
+    section.appendChild(group);
+  }
+
+  function appendHealth(section, week, healthAvailable) {
+    const group = document.createElement("div");
+    group.className = "history-week__group";
+
+    const heading = document.createElement("h4");
+    heading.textContent = "Health status";
+    group.appendChild(heading);
+
+    if (!healthAvailable) {
+      const empty = document.createElement("p");
+      empty.className = "history-week__empty";
+      empty.textContent = "Weekly health history will start when recorded.";
+      group.appendChild(empty);
+    } else if (!week.healthItems.length) {
+      const empty = document.createElement("p");
+      empty.className = "history-week__empty";
+      empty.textContent = "No health status recorded for this week.";
+      group.appendChild(empty);
+    } else {
+      const ul = document.createElement("ul");
+      ul.className = "history-week__list";
+      week.healthItems.forEach(function (item) {
+        const li = document.createElement("li");
+        if (item.date) {
+          const time = document.createElement("time");
+          time.dateTime = item.date.toISOString();
+          time.textContent = auShortDate.format(item.date);
+          li.appendChild(time);
+        }
+        const text = document.createElement("span");
+        text.textContent = item.text;
+        li.appendChild(text);
+        ul.appendChild(li);
+      });
+      group.appendChild(ul);
+    }
+
+    section.appendChild(group);
+  }
+
+  function renderWeek(week, healthAvailable) {
     const section = document.createElement("section");
     section.className = "history-week";
-    section.setAttribute("aria-label", "Week of " + fmtRange(week.start));
+    section.setAttribute("aria-label", "Week of " + formatWeekRange(week.start));
 
     const header = document.createElement("header");
     header.className = "history-week__header";
-    const h3 = document.createElement("h3");
-    h3.className = "history-week__title";
-    h3.textContent = week.year + " · Week " + week.week;
+
+    const title = document.createElement("h3");
+    title.className = "history-week__title";
+    title.textContent = week.year + " - Week " + week.week;
+
     const range = document.createElement("span");
     range.className = "history-week__range";
-    range.textContent = fmtRange(week.start);
-    header.appendChild(h3);
+    range.textContent = formatWeekRange(week.start);
+
+    header.appendChild(title);
     header.appendChild(range);
     section.appendChild(header);
 
-    // Completed tasks group.
-    const tasksGroup = document.createElement("div");
-    tasksGroup.className = "history-week__group";
-    const tasksHead = document.createElement("h4");
-    tasksHead.textContent = "Completed tasks / reminders (" + week.completedTasks.length + ")";
-    tasksGroup.appendChild(tasksHead);
-    if (week.completedTasks.length) {
-      const sorted = week.completedTasks.slice().sort(function (a, b) { return b.at - a.at; });
-      tasksGroup.appendChild(renderList(sorted, function (li, item) {
-        const time = document.createElement("time");
-        time.dateTime = item.at.toISOString();
-        time.textContent = AU_TIME.format(item.at);
-        const span = document.createElement("span");
-        span.textContent = item.title;
-        li.appendChild(time);
-        li.appendChild(span);
-      }));
-    } else {
-      const empty = document.createElement("p");
-      empty.className = "history-week__empty";
-      empty.textContent = "No task completions recorded for this week.";
-      tasksGroup.appendChild(empty);
-    }
-    section.appendChild(tasksGroup);
-
-    // Health / activity group.
-    const healthGroup = document.createElement("div");
-    healthGroup.className = "history-week__group";
-    const healthHead = document.createElement("h4");
-    healthHead.textContent = "Health / activity";
-    healthGroup.appendChild(healthHead);
-
-    if (personalUnavailable) {
-      const empty = document.createElement("p");
-      empty.className = "history-week__empty";
-      empty.textContent = "Weekly health data is not available from the sheet for this week.";
-      healthGroup.appendChild(empty);
-    } else {
-      const activityCount = week.activityDays.length;
-      const strengthCount = week.strengthSessions.length;
-      const yogaCount = week.yogaSessions.length;
-      if (activityCount + strengthCount + yogaCount === 0) {
-        const empty = document.createElement("p");
-        empty.className = "history-week__empty";
-        empty.textContent = "No health entries stored for this week.";
-        healthGroup.appendChild(empty);
-      } else {
-        const ul = document.createElement("ul");
-        ul.className = "history-week__list";
-        [
-          { label: "Daily activity (35 min days)", n: activityCount, of: 7 },
-          { label: "Strength sessions", n: strengthCount, of: 2 },
-          { label: "Yoga / Pilates sessions", n: yogaCount, of: 2 }
-        ].forEach(function (row) {
-          const li = document.createElement("li");
-          const time = document.createElement("time");
-          time.textContent = row.n + " / " + row.of;
-          const span = document.createElement("span");
-          span.textContent = row.label;
-          li.appendChild(time);
-          li.appendChild(span);
-          ul.appendChild(li);
-        });
-        healthGroup.appendChild(ul);
-      }
-    }
-    section.appendChild(healthGroup);
+    appendSummary(section, week, healthAvailable);
+    appendCompletedTasks(section, week.completedTasks);
+    appendHealth(section, week, healthAvailable);
 
     return section;
   }
 
-  function render() {
-    if (!dashboardResult && !personalResult) return;
+  function selectedWeekLimit() {
+    const value = Number(rangeEl && rangeEl.value ? rangeEl.value : MAX_WEEKS);
+    return Number.isFinite(value) && value > 0 ? Math.min(value, MAX_WEEKS) : MAX_WEEKS;
+  }
 
-    const dashboardValue = dashboardResult && dashboardResult.status === "fulfilled" ? dashboardResult.value : null;
-    const personalValue = personalResult && personalResult.status === "fulfilled" ? personalResult.value : null;
-
-    const completionRows = (dashboardValue && (dashboardValue.completionHistory || dashboardValue.taskHistory)) || [];
-    const built = buildWeeks(completionRows, personalValue);
-
-    const personalUnavailable = !built.hasAnyPersonal;
-
-    const rangeVal = rangeEl.value;
-    let weeks = built.weeks;
-    if (rangeVal !== "all") {
-      const n = Number(rangeVal);
-      if (Number.isFinite(n) && n > 0) weeks = weeks.slice(0, n);
-    }
-
+  function render(data) {
+    if (!weeksEl) return;
+    const built = buildWeeks(data);
+    const weeks = built.weeks.slice(0, selectedWeekLimit());
     weeksEl.innerHTML = "";
 
-    // Status messaging.
-    const messages = [];
-    if (dashboardResult && dashboardResult.status !== "fulfilled") {
-      messages.push("Could not load task history from the sheet.");
-    }
-    if (personalResult && personalResult.status !== "fulfilled") {
-      messages.push("Could not load health data from the sheet.");
-    }
-    if (personalUnavailable && personalResult && personalResult.status === "fulfilled") {
-      messages.push("Older weekly health data has not been stored in the sheet — showing task completions only.");
-    }
-
     if (!weeks.length) {
-      const kind = (dashboardResult && dashboardResult.status !== "fulfilled") ? "error" : "empty";
-      const base = kind === "error"
-        ? "No weekly data available. " + messages.join(" ")
-        : "No weekly completions or health entries have been recorded yet.";
-      setStatus(base.trim(), kind);
+      setStatus("No completed tasks have been recorded yet. Weekly health history will start when recorded.", "empty");
       return;
-    }
-
-    if (messages.length) {
-      const kind = (dashboardResult && dashboardResult.status !== "fulfilled") ? "error" : "empty";
-      setStatus(messages.join(" "), kind);
-    } else {
-      hideStatus();
     }
 
     const frag = document.createDocumentFragment();
     weeks.forEach(function (week) {
-      frag.appendChild(renderWeek(week, personalUnavailable));
+      frag.appendChild(renderWeek(week, built.healthAvailable));
     });
     weeksEl.appendChild(frag);
+
+    if (built.healthAvailable) {
+      hideStatus();
+    } else {
+      setStatus("Showing completed task history only. Weekly health history will start when recorded.", "empty");
+    }
   }
 
-  rangeEl.addEventListener("change", render);
+  if (rangeEl) {
+    rangeEl.addEventListener("change", function () {
+      jsonpGetDashboardData()
+        .then(render)
+        .catch(function (err) {
+          setStatus("Could not load Herstory — Week by week: " + (err && err.message ? err.message : err), "error");
+          if (weeksEl) weeksEl.innerHTML = "";
+        });
+    });
+  }
 
-  setStatus("Loading weekly history from the sheet…", "");
-
-  Promise.allSettled([jsonpGet("dashboardData"), jsonpGet("personalData")]).then(function (results) {
-    dashboardResult = results[0];
-    personalResult = results[1];
-    try {
-      render();
-    } catch (err) {
-      setStatus("Something went wrong rendering history: " + (err && err.message ? err.message : err), "error");
-    }
-  });
+  setStatus("Loading Herstory — Week by week from the sheet...", "");
+  jsonpGetDashboardData()
+    .then(render)
+    .catch(function (err) {
+      setStatus("Could not load Herstory — Week by week: " + (err && err.message ? err.message : err), "error");
+      if (weeksEl) weeksEl.innerHTML = "";
+    });
 })();
