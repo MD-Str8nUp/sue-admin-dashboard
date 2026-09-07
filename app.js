@@ -1438,21 +1438,26 @@ function setupForms() {
     captureSpeechStatus.className = `capture-status capture-status--${type}`;
   }
 
-  function focusCaptureTextForKeyboard() {
-    captureText.focus({ preventScroll: false });
+  function focusCaptureForKeyboard(reason) {
+    captureSaveState.textContent = "Typed fallback ready";
+    try {
+      captureText.focus({ preventScroll: false });
+    } catch {
+      captureText.focus();
+    }
     const end = captureText.value.length;
     try {
       captureText.setSelectionRange(end, end);
     } catch {
       // Some mobile browsers may not expose selection APIs until the field is active.
     }
-    captureText.scrollIntoView({ block: "center", behavior: "smooth" });
-  }
-
-  function showKeyboardDictationFallback() {
-    captureSaveState.textContent = "Typed fallback ready";
-    focusCaptureTextForKeyboard();
-    updateSpeechSupportStatus("Use the microphone on the iPhone keyboard to dictate", "info");
+    try {
+      captureText.scrollIntoView({ block: "center", behavior: "smooth" });
+    } catch {
+      captureText.scrollIntoView();
+    }
+    updateSpeechSupportStatus("Use the microphone on the iPhone keyboard to dictate, or type the task.", "info");
+    return reason;
   }
 
   function initialiseSpeechCapture() {
@@ -1460,7 +1465,7 @@ function setupForms() {
     if (!Recognition) {
       captureSpeak.disabled = false;
       captureSpeak.textContent = "Dictate / type task";
-      updateSpeechSupportStatus("Use the microphone on the iPhone keyboard to dictate", "info");
+      updateSpeechSupportStatus("Use the microphone on the iPhone keyboard to dictate, or type the task.", "info");
       return null;
     }
 
@@ -1497,7 +1502,7 @@ function setupForms() {
   captureSpeak.addEventListener("click", () => {
     const Recognition = SpeechRecognitionConstructor || window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) {
-      showKeyboardDictationFallback();
+      focusCaptureForKeyboard("unsupported");
       return;
     }
     const recognition = new Recognition();
@@ -1512,8 +1517,8 @@ function setupForms() {
       updateSpeechSupportStatus("Speech captured. Review the text and dates before saving.", "success");
       refreshCapturePreview(true);
     };
-    recognition.onerror = () => {
-      showKeyboardDictationFallback();
+    recognition.onerror = (event) => {
+      focusCaptureForKeyboard(event && event.error ? event.error : "recognition-error");
     };
     recognition.onend = () => {
       if (captureSaveState.textContent === "Listening") captureSaveState.textContent = "Typed fallback ready";
@@ -1521,7 +1526,7 @@ function setupForms() {
     try {
       recognition.start();
     } catch {
-      showKeyboardDictationFallback();
+      focusCaptureForKeyboard("start-failed");
     }
   });
 
