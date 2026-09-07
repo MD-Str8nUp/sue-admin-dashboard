@@ -1797,3 +1797,23 @@ textarea:focus {
   .materials-box__row { flex-direction: column; align-items: stretch; }
   .materials-box__row .button { width: 100%; }
 }
+
+/* -------- Workflow 4: matter hub + resource finder -------- */
+.workflow4__form .materials-box { gap: 6px; }
+.workflow4__form #wf4-search { width: 100%; }
+.workflow4__placeholders {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px dashed var(--line-soft);
+  border-radius: 8px;
+  background: #fafafa;
+}
+.workflow4__placeholders legend { padding: 0 6px; font-weight: 600; }
+.workflow4__placeholders .actions { flex-wrap: wrap; }
+.workflow4__placeholders .button[disabled] { opacity: 0.55; cursor: not-allowed; }
+.workflow4__pending { margin-top: 14px; }
+.workflow4__pending ul { margin: 6px 0 0 20px; padding: 0; }
+.workflow4__pending li { margin: 3px 0; }
+@media (max-width: 560px) {
+  .workflow4__placeholders .actions .button { width: 100%; }
+}
