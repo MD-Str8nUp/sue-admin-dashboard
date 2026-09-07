@@ -1875,8 +1875,8 @@ const WORKFLOW5_CATEGORIES = [
   },
   {
     id: "travel",
-    label: "Travel / admin",
-    activeLabel: "Travel and general admin",
+    label: "Travel",
+    activeLabel: "Travel admin",
     phrase: "Prepare travel admin for [trip] by [date]; remind me five days before.",
     checklist: [
       "Trip or admin task summary (destination, purpose)",
@@ -1884,6 +1884,19 @@ const WORKFLOW5_CATEGORIES = [
       "Bookings or forms outstanding (flights, accommodation, forms)",
       "Documents to carry or upload",
       "Reminder lead time for bookings and packing"
+    ]
+  },
+  {
+    id: "general-admin",
+    label: "General admin",
+    activeLabel: "General admin task",
+    phrase: "Complete general admin task [task] by [date]; remind me three days before.",
+    checklist: [
+      "Plain-English action to complete",
+      "Due date or review date",
+      "Any document, account, or person needed before starting",
+      "Whether it belongs in This week or Upcoming deadlines",
+      "Reminder lead time that matches the urgency"
     ]
   }
 ];
@@ -1917,24 +1930,35 @@ function setupWorkflow5() {
   }
 
   function renderChips() {
+    if (!chipsHost) return;
     chipsHost.innerHTML = "";
-    WORKFLOW5_CATEGORIES.forEach((cat) => {
+    WORKFLOW5_CATEGORIES.forEach((cat, index) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "workflow5__chip" + (cat.id === activeId ? " is-active" : "");
       btn.setAttribute("role", "radio");
       btn.setAttribute("aria-checked", String(cat.id === activeId));
+      btn.tabIndex = cat.id === activeId || index === 0 ? 0 : -1;
       btn.dataset.categoryId = cat.id;
       btn.textContent = cat.label;
       btn.addEventListener("click", () => selectCategory(cat.id));
+      btn.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const nextIndex = (index + (event.key === "ArrowRight" ? 1 : WORKFLOW5_CATEGORIES.length - 1)) % WORKFLOW5_CATEGORIES.length;
+        selectCategory(WORKFLOW5_CATEGORIES[nextIndex].id);
+        const nextButton = chipsHost.querySelector(`[data-category-id="${WORKFLOW5_CATEGORIES[nextIndex].id}"]`);
+        if (nextButton) nextButton.focus();
+      });
       chipsHost.append(btn);
     });
   }
 
   function renderActive() {
     const cat = WORKFLOW5_CATEGORIES.find((c) => c.id === activeId) || WORKFLOW5_CATEGORIES[0];
-    activeLabel.textContent = cat.activeLabel;
-    phraseEl.value = cat.phrase;
+    if (activeLabel) activeLabel.textContent = cat.activeLabel;
+    if (phraseEl) phraseEl.value = cat.phrase;
+    if (!checklistEl) return;
     checklistEl.innerHTML = "";
     cat.checklist.forEach((text) => {
       const li = document.createElement("li");
@@ -1975,19 +1999,22 @@ function setupWorkflow5() {
   renderActive();
 
   copyBtn.addEventListener("click", async () => {
+    const phrase = phraseEl ? phraseEl.value : "";
     try {
-      await navigator.clipboard.writeText(phraseEl.value);
+      await navigator.clipboard.writeText(phrase);
       setStatus("Phrase copied. Paste into Quick Capture and adjust dates as needed.", "success");
     } catch {
-      phraseEl.focus();
-      phraseEl.select();
+      if (phraseEl) {
+        phraseEl.focus();
+        phraseEl.select();
+      }
       setStatus("Copy unavailable. Phrase is selected so you can copy it manually.", "error");
     }
   });
 
   function goToCapture() {
     activateTab("work-tab");
-    scrollTo("#work-panel .quick-capture-panel", "#capture-text");
+    scrollTo("#capture-title", "#capture-text");
     setStatus("Quick Capture focused. Paste the phrase and save the task there.", "info");
   }
 
@@ -2008,13 +2035,17 @@ function setupWorkflow5() {
 
   goProgress.addEventListener("click", () => {
     activateTab("progress-tab");
-    scrollTo("#progress-panel");
+    scrollTo("#progress-title");
+    window.setTimeout(() => {
+      const kanban = document.getElementById("progress-kanban");
+      if (kanban) kanban.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 250);
     setStatus("Progress view opened. The Kanban shows tasks as they move.", "info");
   });
 
   goHealth.addEventListener("click", () => {
     activateTab("health-tab");
-    scrollTo("#health-panel");
+    scrollTo("#personal-health-title");
     setStatus("Health view opened. Personal admin does not write here.", "info");
   });
 }

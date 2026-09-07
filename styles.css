@@ -1825,34 +1825,41 @@ textarea:focus {
   border: 1px dashed var(--line-soft);
   border-radius: 8px;
   background: #fafafa;
+  min-width: 0;
 }
 .workflow5__categories legend { padding: 0 6px; font-weight: 600; }
 .workflow5__chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 8px;
   margin-top: 8px;
+  min-width: 0;
 }
 .workflow5__chip {
   appearance: none;
   border: 1px solid var(--line-soft);
   background: #fff;
-  border-radius: 999px;
-  padding: 8px 14px;
+  border-radius: 8px;
+  padding: 10px 12px;
   font: inherit;
+  font-weight: 700;
   color: inherit;
   cursor: pointer;
-  min-height: 40px;
+  min-height: 44px;
   line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
-.workflow5__chip:hover { border-color: #999; }
+.workflow5__chip:hover { border-color: var(--navy-soft); }
 .workflow5__chip.is-active {
-  background: #1f3b73;
+  background: var(--navy);
   color: #fff;
-  border-color: #1f3b73;
+  border-color: var(--navy);
 }
 .workflow5__chip:focus-visible {
-  outline: 2px solid #1f3b73;
+  outline: 3px solid #0b5fff;
   outline-offset: 2px;
 }
 .workflow5__subtitle {
@@ -1885,6 +1892,7 @@ textarea:focus {
   border: 1px solid var(--line-soft);
   border-radius: 8px;
   background: #fff;
+  min-width: 0;
 }
 .workflow5__capture-head {
   display: flex;
@@ -1895,29 +1903,37 @@ textarea:focus {
 }
 .workflow5__capture-head .workflow5__subtitle { margin: 0; }
 .workflow5__pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  max-width: 100%;
   font-size: 0.8rem;
   padding: 2px 10px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: #eef2f9;
-  color: #1f3b73;
+  color: var(--navy);
   border: 1px solid #d0dbee;
+  overflow-wrap: anywhere;
 }
 .workflow5__hint {
   margin: 6px 0 8px;
   font-size: 0.9rem;
-  color: #555;
+  color: var(--muted);
 }
 .workflow5__phrase {
   width: 100%;
+  min-width: 0;
+  min-height: 96px;
   padding: 10px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 1rem;
   background: #fafafa;
   resize: vertical;
+  overflow-wrap: anywhere;
 }
-.workflow5__actions { flex-wrap: wrap; margin-top: 8px; }
+.workflow5__actions { flex-wrap: wrap; margin-top: 8px; gap: 8px; }
 .workflow5__checklist-wrap { margin-top: 10px; }
 .workflow5__checklist {
   list-style: none;
@@ -1933,6 +1949,7 @@ textarea:focus {
   background: #fff;
   position: relative;
   font-size: 0.92rem;
+  overflow-wrap: anywhere;
 }
 .workflow5__checklist li::before {
   content: "";
@@ -1945,13 +1962,48 @@ textarea:focus {
   border-radius: 3px;
   background: #fff;
 }
-.workflow5__shortcuts { margin-top: 14px; }
-.workflow5__shortcut-buttons { flex-wrap: wrap; }
+.workflow5__shortcuts { margin-top: 14px; min-width: 0; }
+.workflow5__shortcut-buttons { flex-wrap: wrap; gap: 8px; }
 .workflow5__pending { margin-top: 14px; }
 .workflow5__pending ul { margin: 6px 0 0 20px; padding: 0; }
 .workflow5__pending li { margin: 3px 0; }
+@media (max-width: 760px) {
+  .workflow5__glossary > div,
+  .workflow5__capture,
+  .workflow5__categories {
+    padding: 10px;
+  }
+
+  .workflow5__chips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workflow5__capture-head {
+    align-items: flex-start;
+  }
+}
 @media (max-width: 560px) {
-  .workflow5__chip { flex: 1 1 auto; text-align: center; }
+  .workflow5__chips {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow5__subtitle {
+    font-size: 0.98rem;
+  }
+
+  .workflow5__glossary dd,
+  .workflow5__hint,
+  .workflow5__checklist li {
+    font-size: 0.9rem;
+  }
+
+  .workflow5__phrase {
+    min-height: 116px;
+  }
+
   .workflow5__shortcut-buttons .button,
-  .workflow5__actions .button { width: 100%; }
+  .workflow5__actions .button {
+    width: 100%;
+    min-height: 44px;
+  }
 }
