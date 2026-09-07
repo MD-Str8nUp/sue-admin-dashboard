@@ -741,8 +741,14 @@
               <ul class="kanban-col__list" id="kanban-done-list"></ul>
             </section>
           </div>
-          <h3 class="progress-subtitle">Recently completed</h3>
-          <ul class="list progress-history" id="progress-history"></ul>
+          <details class="progress-history-details" id="progress-history-details">
+            <summary class="progress-history-details__summary">
+              <span class="progress-subtitle progress-history-details__title">Recently completed</span>
+              <span class="progress-history-details__count" id="progress-history-count">0</span>
+            </summary>
+            <ul class="list progress-history" id="progress-history"></ul>
+          </details>
+          <p class="kanban-status" id="kanban-status" role="status" aria-live="polite" hidden></p>
         </section>
       </section>
 

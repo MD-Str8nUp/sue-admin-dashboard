@@ -700,6 +700,8 @@ function renderProgress() {
   document.getElementById("progress-open").textContent = String(state.tasks.filter((item) => item.status !== "Done").length);
   document.getElementById("progress-reminders").textContent = String(reminderDueCount());
   renderProgressKanban(doneThisWeekEntries);
+  const countEl = document.getElementById("progress-history-count");
+  if (countEl) countEl.textContent = String(completedTasks.length);
   history.innerHTML = "";
   if (!completedTasks.length) {
     const empty = document.createElement("li"); empty.className = "empty"; empty.textContent = "Completed tasks will appear here with the date they were marked done."; history.append(empty); return;
@@ -711,6 +713,23 @@ function renderProgress() {
     date.textContent = entry.completedAt ? `Completed ${formatDateTime(entry.completedAt)}` : "Completed: Not recorded";
     row.append(title, date); history.append(row);
   });
+}
+
+const KANBAN_STATUS_LABEL = { Open: "To do", Waiting: "In progress", Done: "Done" };
+let kanbanBusy = false;
+
+function setKanbanStatus(message, type = "info") {
+  const el = document.getElementById("kanban-status");
+  if (!el) return;
+  if (!message) {
+    el.hidden = true;
+    el.textContent = "";
+    el.className = "kanban-status";
+    return;
+  }
+  el.hidden = false;
+  el.textContent = message;
+  el.className = `kanban-status kanban-status--${type}`;
 }
 
 function renderProgressKanban(doneThisWeekEntries) {
@@ -727,20 +746,30 @@ function renderProgressKanban(doneThisWeekEntries) {
   document.getElementById("kanban-inprogress-count").textContent = String(inProgress.length);
   document.getElementById("kanban-done-count").textContent = String(doneThisWeekEntries.length);
 
-  fillKanbanColumn(todoList, todo, "No open tasks.", (item) => {
+  [todoList, inProgressList, doneList].forEach((list) => {
+    if (!list.dataset.dropWired) {
+      wireKanbanDropTarget(list);
+      list.dataset.dropWired = "1";
+    }
+  });
+  todoList.dataset.targetStatus = "Open";
+  inProgressList.dataset.targetStatus = "Waiting";
+  doneList.dataset.targetStatus = "Done";
+
+  fillKanbanColumn(todoList, todo, "Open", "No open tasks.", (item) => {
     const meta = taskMetaText(item);
     return meta && meta !== "No date" ? meta : "";
   });
-  fillKanbanColumn(inProgressList, inProgress, "Nothing waiting.", (item) => {
+  fillKanbanColumn(inProgressList, inProgress, "Waiting", "Nothing waiting.", (item) => {
     const meta = taskMetaText(item);
     return meta && meta !== "No date" ? meta : "";
   });
-  fillKanbanColumn(doneList, doneThisWeekEntries, "Nothing completed this week yet.", (entry) => (
+  fillKanbanColumn(doneList, doneThisWeekEntries, "Done", "Nothing completed this week yet.", (entry) => (
     entry.completedAt ? `Completed ${formatDateTime(entry.completedAt)}` : ""
-  ), (entry) => entry.title);
+  ), (entry) => entry.title, true);
 }
 
-function fillKanbanColumn(listEl, items, emptyText, metaFn, titleFn) {
+function fillKanbanColumn(listEl, items, currentStatus, emptyText, metaFn, titleFn, isDoneColumn = false) {
   listEl.innerHTML = "";
   if (!items.length) {
     const empty = document.createElement("li");
@@ -750,12 +779,35 @@ function fillKanbanColumn(listEl, items, emptyText, metaFn, titleFn) {
     return;
   }
   items.forEach((item) => {
+    const taskId = isDoneColumn ? String(item.id || "") : String(item.id || "");
+    const task = state.tasks.find((t) => String(t.id) === taskId);
+    const sheetBacked = task ? isSheetTask(task) : false;
     const card = document.createElement("li");
     card.className = "kanban-card";
+    card.dataset.taskId = taskId;
+    card.dataset.currentStatus = currentStatus;
+    card.dataset.source = sheetBacked ? "sheet" : "local";
+    card.setAttribute("draggable", "true");
+    card.tabIndex = 0;
+
+    const header = document.createElement("div");
+    header.className = "kanban-card__header";
+
     const title = document.createElement("strong");
     title.className = "kanban-card__title";
     title.textContent = titleFn ? titleFn(item) : (displayTaskTitle(item) || "Task");
-    card.append(title);
+    header.append(title);
+
+    if (!sheetBacked && task) {
+      const badge = document.createElement("span");
+      badge.className = "kanban-card__badge kanban-card__badge--local";
+      badge.textContent = "Local demo";
+      badge.title = "Stored in this browser only";
+      header.append(badge);
+    }
+
+    card.append(header);
+
     const metaText = metaFn ? metaFn(item) : "";
     if (metaText) {
       const meta = document.createElement("span");
@@ -763,8 +815,204 @@ function fillKanbanColumn(listEl, items, emptyText, metaFn, titleFn) {
       meta.textContent = metaText;
       card.append(meta);
     }
+
+    if (task) {
+      const controls = document.createElement("div");
+      controls.className = "kanban-card__controls";
+      const moveBtn = document.createElement("button");
+      moveBtn.type = "button";
+      moveBtn.className = "kanban-card__move";
+      moveBtn.setAttribute("aria-haspopup", "true");
+      moveBtn.setAttribute("aria-expanded", "false");
+      moveBtn.setAttribute("aria-label", `Move task: ${displayTaskTitle(task) || "task"}`);
+      moveBtn.textContent = "Move";
+      const menu = document.createElement("div");
+      menu.className = "kanban-card__menu";
+      menu.hidden = true;
+      ["Open", "Waiting", "Done"].forEach((status) => {
+        const opt = document.createElement("button");
+        opt.type = "button";
+        opt.className = "kanban-card__menu-item";
+        opt.textContent = KANBAN_STATUS_LABEL[status];
+        if (status === currentStatus) {
+          opt.setAttribute("aria-current", "true");
+          opt.disabled = true;
+        }
+        opt.addEventListener("click", async (ev) => {
+          ev.stopPropagation();
+          menu.hidden = true;
+          moveBtn.setAttribute("aria-expanded", "false");
+          if (status === currentStatus) return;
+          await moveKanbanTask(taskId, currentStatus, status, card);
+        });
+        menu.append(opt);
+      });
+      moveBtn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const open = menu.hidden;
+        closeAllKanbanMenus();
+        menu.hidden = !open;
+        moveBtn.setAttribute("aria-expanded", String(open));
+      });
+      controls.append(moveBtn, menu);
+      card.append(controls);
+    }
+
+    wireKanbanCardDrag(card, currentStatus);
     listEl.append(card);
   });
+}
+
+function closeAllKanbanMenus() {
+  document.querySelectorAll(".kanban-card__menu").forEach((m) => { m.hidden = true; });
+  document.querySelectorAll(".kanban-card__move[aria-expanded=\"true\"]").forEach((b) => b.setAttribute("aria-expanded", "false"));
+}
+
+document.addEventListener("click", (ev) => {
+  if (!(ev.target instanceof Element)) return;
+  if (!ev.target.closest(".kanban-card__controls")) closeAllKanbanMenus();
+});
+
+function wireKanbanDropTarget(listEl) {
+  listEl.addEventListener("dragover", (ev) => {
+    if (kanbanBusy) return;
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = "move";
+    listEl.classList.add("kanban-col__list--drop");
+  });
+  listEl.addEventListener("dragleave", (ev) => {
+    if (ev.target === listEl) listEl.classList.remove("kanban-col__list--drop");
+  });
+  listEl.addEventListener("drop", (ev) => {
+    ev.preventDefault();
+    listEl.classList.remove("kanban-col__list--drop");
+    if (kanbanBusy) return;
+    const taskId = ev.dataTransfer.getData("text/plain");
+    const target = listEl.dataset.targetStatus;
+    if (!taskId || !target) return;
+    const card = document.querySelector(`.kanban-card[data-task-id="${CSS.escape(taskId)}"]`);
+    const currentStatus = card ? card.dataset.currentStatus : null;
+    if (!currentStatus || currentStatus === target) return;
+    moveKanbanTask(taskId, currentStatus, target, card);
+  });
+}
+
+function wireKanbanCardDrag(card, currentStatus) {
+  card.addEventListener("dragstart", (ev) => {
+    if (kanbanBusy) { ev.preventDefault(); return; }
+    ev.dataTransfer.effectAllowed = "move";
+    ev.dataTransfer.setData("text/plain", card.dataset.taskId || "");
+    card.classList.add("kanban-card--dragging");
+  });
+  card.addEventListener("dragend", () => {
+    card.classList.remove("kanban-card--dragging");
+    document.querySelectorAll(".kanban-col__list--drop").forEach((el) => el.classList.remove("kanban-col__list--drop"));
+  });
+
+  let pointerState = null;
+  card.addEventListener("pointerdown", (ev) => {
+    if (ev.pointerType === "mouse") return;
+    if (ev.target instanceof Element && ev.target.closest(".kanban-card__controls")) return;
+    if (kanbanBusy) return;
+    pointerState = {
+      id: ev.pointerId,
+      startX: ev.clientX,
+      startY: ev.clientY,
+      active: false,
+      ghost: null,
+      lastDrop: null
+    };
+  });
+  card.addEventListener("pointermove", (ev) => {
+    if (!pointerState || pointerState.id !== ev.pointerId) return;
+    const dx = ev.clientX - pointerState.startX;
+    const dy = ev.clientY - pointerState.startY;
+    if (!pointerState.active) {
+      if (Math.hypot(dx, dy) < 8) return;
+      pointerState.active = true;
+      try { card.setPointerCapture(ev.pointerId); } catch (_) {}
+      const rect = card.getBoundingClientRect();
+      const ghost = card.cloneNode(true);
+      ghost.classList.add("kanban-card--ghost");
+      ghost.style.position = "fixed";
+      ghost.style.left = `${rect.left}px`;
+      ghost.style.top = `${rect.top}px`;
+      ghost.style.width = `${rect.width}px`;
+      ghost.style.pointerEvents = "none";
+      ghost.style.zIndex = "9999";
+      document.body.append(ghost);
+      pointerState.ghost = ghost;
+      pointerState.offsetX = ev.clientX - rect.left;
+      pointerState.offsetY = ev.clientY - rect.top;
+      card.classList.add("kanban-card--dragging");
+      document.body.classList.add("kanban-dragging");
+    }
+    ev.preventDefault();
+    pointerState.ghost.style.transform = `translate(${ev.clientX - pointerState.startX}px, ${ev.clientY - pointerState.startY}px)`;
+    pointerState.ghost.style.display = "none";
+    const under = document.elementFromPoint(ev.clientX, ev.clientY);
+    pointerState.ghost.style.display = "";
+    const dropList = under ? under.closest(".kanban-col__list") : null;
+    if (pointerState.lastDrop && pointerState.lastDrop !== dropList) {
+      pointerState.lastDrop.classList.remove("kanban-col__list--drop");
+    }
+    if (dropList) dropList.classList.add("kanban-col__list--drop");
+    pointerState.lastDrop = dropList;
+  });
+  const endPointer = (ev) => {
+    if (!pointerState || pointerState.id !== ev.pointerId) return;
+    const state = pointerState;
+    pointerState = null;
+    card.classList.remove("kanban-card--dragging");
+    document.body.classList.remove("kanban-dragging");
+    if (state.ghost) state.ghost.remove();
+    if (state.lastDrop) state.lastDrop.classList.remove("kanban-col__list--drop");
+    if (!state.active) return;
+    const target = state.lastDrop ? state.lastDrop.dataset.targetStatus : null;
+    if (!target || target === currentStatus) return;
+    moveKanbanTask(card.dataset.taskId || "", currentStatus, target, card);
+  };
+  card.addEventListener("pointerup", endPointer);
+  card.addEventListener("pointercancel", endPointer);
+}
+
+async function moveKanbanTask(taskId, fromStatus, toStatus, card) {
+  if (kanbanBusy) return;
+  const task = state.tasks.find((t) => String(t.id) === String(taskId));
+  if (!task) {
+    setKanbanStatus("Could not find that task to move.", "error");
+    return;
+  }
+  const nextStatus = normaliseTaskStatus(toStatus);
+  const label = KANBAN_STATUS_LABEL[nextStatus] || nextStatus;
+  const sheetBacked = isSheetTask(task);
+  const match = sheetBacked ? /^sheet-task-(\d+)$/.exec(String(task.id || "")) : null;
+
+  if (card) card.classList.add("kanban-card--saving");
+  kanbanBusy = true;
+
+  if (match) {
+    setKanbanStatus(`Saving “${displayTaskTitle(task) || "task"}” → ${label}…`, "info");
+    try {
+      await sheetWrite("updateTaskStatus", { rowNumber: Number(match[1]), status: nextStatus });
+      setKanbanStatus(`Saved “${displayTaskTitle(task) || "task"}” as ${label}.`, "success");
+      setApiStatus("Saved to Google Sheet.", "success");
+    } catch (err) {
+      const detail = err && err.message ? err.message : String(err);
+      setKanbanStatus(`Could not save to Google Sheet — restored to ${KANBAN_STATUS_LABEL[fromStatus] || fromStatus}. ${detail}`, "error");
+      setApiStatus(`Sheet write failed — status not changed. ${detail}`, "error");
+    } finally {
+      kanbanBusy = false;
+      renderAll();
+    }
+    return;
+  }
+
+  applyLocalTaskStatus(task, nextStatus);
+  saveState();
+  kanbanBusy = false;
+  setKanbanStatus(`Moved local demo task “${displayTaskTitle(task) || "task"}” to ${label} (this browser only).`, "info");
+  renderAll();
 }
 
 function renderTodayBlocks() {
