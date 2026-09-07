@@ -1418,6 +1418,158 @@ function setupLetterPacker() {
   });
 }
 
+const WORKFLOW3_DEFAULT_CHECKLIST = [
+  "Confirm appointment type and duration with Sue",
+  "Confirm client contact preference (phone / telehealth / in person)",
+  "Check any pre-session documents are ready to share manually",
+  "Confirm approved meeting link source before sending anything",
+  "Note any accessibility or reminder needs"
+];
+
+function setWorkflow3Status(message, type = "info") {
+  const status = document.getElementById("wf3-status");
+  if (!status) return;
+  status.textContent = message;
+  status.className = `import-status import-status--${type}`;
+}
+
+function renderWorkflow3Checklist(items) {
+  const box = document.getElementById("wf3-checklist");
+  if (!box) return;
+  box.innerHTML = "";
+  items.forEach((text, index) => {
+    const row = document.createElement("label");
+    row.className = "materials-box__row";
+    row.setAttribute("role", "listitem");
+
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.dataset.wf3Check = String(index);
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = text;
+    input.maxLength = 200;
+    input.autocomplete = "off";
+    input.className = "materials-box__label";
+    input.setAttribute("aria-label", `Checklist item ${index + 1}`);
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "button button--ghost button--small";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => {
+      row.remove();
+    });
+
+    row.append(check, input, remove);
+    box.append(row);
+  });
+}
+
+function collectWorkflow3Checklist() {
+  const box = document.getElementById("wf3-checklist");
+  if (!box) return [];
+  return Array.from(box.querySelectorAll(".materials-box__label"))
+    .map((input) => input.value.trim())
+    .filter(Boolean);
+}
+
+function workflow3DraftText() {
+  const type = document.getElementById("wf3-type").value || "[appointment type placeholder]";
+  const recipient = document.getElementById("wf3-recipient").value.trim() || "[recipient display name]";
+  const date = document.getElementById("wf3-date").value || "[appointment date]";
+  const time = document.getElementById("wf3-time").value || "[appointment time]";
+  const duration = document.getElementById("wf3-duration").value.trim() || "[duration]";
+  const link = document.getElementById("wf3-link").value.trim();
+  const checklist = collectWorkflow3Checklist();
+
+  const lines = [
+    "DRAFT CONFIRMATION — not sent, not scheduled, not linked.",
+    "",
+    `Hello ${recipient},`,
+    "",
+    `This is a draft confirmation for a ${type}.`,
+    `Proposed date/time: ${date} ${time}`,
+    `Proposed duration: ${duration}`,
+    ""
+  ];
+
+  if (link) {
+    lines.push(`Meeting/link (manually supplied): ${link}`);
+  } else {
+    lines.push("Meeting/link: to be provided manually by an approved process.");
+  }
+
+  lines.push("", "Preparation checklist:");
+  if (checklist.length === 0) {
+    lines.push("  - (no items entered)");
+  } else {
+    checklist.forEach((item) => lines.push(`  - ${item}`));
+  }
+
+  lines.push(
+    "",
+    "Reminders:",
+    "- No calendar event has been created.",
+    "- No telehealth link has been generated.",
+    "- No message has been sent from this page.",
+    "- Cancellation/rescheduling wording is still to be confirmed.",
+    "",
+    "Kind regards,",
+    "Sue"
+  );
+
+  return lines.join("\n");
+}
+
+function setupWorkflow3() {
+  const form = document.getElementById("workflow3-form");
+  if (!form) return;
+  const preview = document.getElementById("wf3-preview");
+
+  renderWorkflow3Checklist(WORKFLOW3_DEFAULT_CHECKLIST);
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+  });
+
+  document.getElementById("wf3-add-check").addEventListener("click", () => {
+    const input = document.getElementById("wf3-new-check");
+    const value = input.value.trim();
+    if (!value) return;
+    const current = collectWorkflow3Checklist();
+    current.push(value);
+    renderWorkflow3Checklist(current);
+    input.value = "";
+    setWorkflow3Status("Checklist item added to this page only.", "success");
+  });
+
+  document.getElementById("wf3-generate").addEventListener("click", () => {
+    preview.value = workflow3DraftText();
+    setWorkflow3Status("Draft preview generated in this page only. Nothing sent or scheduled.", "success");
+  });
+
+  document.getElementById("wf3-copy").addEventListener("click", async () => {
+    if (!preview.value.trim()) preview.value = workflow3DraftText();
+    try {
+      await navigator.clipboard.writeText(preview.value);
+      setWorkflow3Status("Draft copied to clipboard.", "success");
+    } catch {
+      preview.focus();
+      preview.select();
+      setWorkflow3Status("Copy unavailable. Draft is selected so you can copy it manually.", "error");
+    }
+  });
+
+  document.getElementById("wf3-clear").addEventListener("click", () => {
+    form.reset();
+    preview.value = "";
+    renderWorkflow3Checklist(WORKFLOW3_DEFAULT_CHECKLIST);
+    setWorkflow3Status("Draft fields cleared from this page.", "info");
+  });
+}
+
 function setupForms() {
   const captureText = document.getElementById("capture-text");
   const captureDue = document.getElementById("capture-due");
@@ -1933,6 +2085,7 @@ function setupDashboardTabs() {
 setupClinicalNoteFormatter();
 setupEmailDraft();
 setupLetterPacker();
+setupWorkflow3();
 setupForms();
 setupPersonalHealth();
 setupDashboardTabs();

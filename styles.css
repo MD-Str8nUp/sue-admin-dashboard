@@ -1774,3 +1774,26 @@ textarea:focus {
     align-self: flex-start;
   }
 }
+
+/* -------- Workflow 3: appointment + telehealth prep -------- */
+.workflow3__form .materials-box { gap: 6px; }
+.materials-box__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fff;
+  flex-wrap: wrap;
+}
+.materials-box__row input[type="checkbox"] { min-width: 18px; min-height: 18px; }
+.materials-box__label { flex: 1 1 220px; min-width: 0; }
+.button--small { padding: 6px 10px; font-size: 0.85rem; }
+.workflow3__pending { margin-top: 14px; }
+.workflow3__pending ul { margin: 6px 0 0 20px; padding: 0; }
+.workflow3__pending li { margin: 3px 0; }
+@media (max-width: 560px) {
+  .materials-box__row { flex-direction: column; align-items: stretch; }
+  .materials-box__row .button { width: 100%; }
+}
