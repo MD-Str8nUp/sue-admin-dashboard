@@ -2139,6 +2139,19 @@ const WORKFLOW5_CATEGORIES = [
     ]
   },
   {
+    id: "dropbox-admin",
+    label: "Dropbox admin",
+    activeLabel: "Dropbox admin",
+    phrase: "Organise, rename, and move personal admin documents in Dropbox by [date]; remind me three days before.",
+    checklist: [
+      "Destination folder for the documents",
+      "Final file names or naming pattern to use",
+      "Access or sharing settings to check",
+      "Duplicate, archive, or keep-current decision",
+      "Due date and reminder lead time"
+    ]
+  },
+  {
     id: "general-admin",
     label: "General admin",
     activeLabel: "General admin task",
